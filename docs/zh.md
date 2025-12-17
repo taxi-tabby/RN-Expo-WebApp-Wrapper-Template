@@ -27,6 +27,22 @@
 ---
 
 
+## URL过滤
+
+在`allowedUrlPatterns`中设置允许的URL模式。不允许的URL将在外部浏览器中打开。
+
+```typescript
+allowedUrlPatterns: [
+  'https://example.com',     // 精确域名
+  'https://*.example.com',   // 通配符（子域名）
+],
+// 空数组允许所有URL
+```
+
+
+---
+
+
 ## 桥接系统
 
 ```text

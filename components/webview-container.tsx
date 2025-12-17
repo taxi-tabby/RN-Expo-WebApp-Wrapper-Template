@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,6 +17,7 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type {
+  ShouldStartLoadRequest,
   WebViewErrorEvent,
   WebViewHttpErrorEvent,
   WebViewMessageEvent,
@@ -54,6 +56,67 @@ export default function WebViewContainer() {
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { webview, theme } = APP_CONFIG;
+
+  /**
+   * URL이 허용된 패턴과 일치하는지 확인
+   * allowedUrlPatterns에 정의된 패턴과 매칭
+   * - 와일드카드(*) 지원: https://*.example.com
+   * - 정확한 도메인 매칭: https://example.com
+   */
+  const isUrlAllowed = useCallback((url: string): boolean => {
+    const patterns = webview.allowedUrlPatterns as readonly string[];
+    
+    // 패턴이 비어있으면 모든 URL 허용
+    if (!patterns || patterns.length === 0) {
+      return true;
+    }
+
+    // 특수 스킴은 항상 허용 (javascript:, about:, data: 등)
+    const specialSchemes = ['javascript:', 'about:', 'data:', 'blob:'];
+    if (specialSchemes.some(scheme => url.startsWith(scheme))) {
+      return true;
+    }
+
+    // 브릿지 프로토콜은 항상 허용
+    if (url.startsWith('app://')) {
+      return true;
+    }
+
+    // 각 패턴과 매칭 확인
+    return patterns.some(pattern => {
+      // 와일드카드 패턴을 정규표현식으로 변환
+      // https://*.example.com -> https://[^/]+\.example\.com
+      const regexPattern = pattern
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // 특수문자 이스케이프
+        .replace(/\\\*/g, '[^/]+'); // * -> [^/]+ (슬래시 제외 모든 문자)
+      
+      const regex = new RegExp(`^${regexPattern}`, 'i');
+      return regex.test(url);
+    });
+  }, [webview.allowedUrlPatterns]);
+
+  /**
+   * URL 요청 처리
+   * - 허용된 URL: WebView 내에서 로드
+   * - 허용되지 않은 URL: 외부 브라우저로 열기
+   */
+  const handleShouldStartLoadWithRequest = useCallback((request: ShouldStartLoadRequest): boolean => {
+    const { url } = request;
+    
+    // 허용된 URL이면 WebView에서 로드
+    if (isUrlAllowed(url)) {
+      return true;
+    }
+
+    // 허용되지 않은 URL은 외부 브라우저로 열기
+    console.log('[WebView] Opening external URL:', url);
+    Linking.openURL(url).catch(err => {
+      console.error('[WebView] Failed to open URL:', err);
+    });
+    
+    // WebView에서는 로드하지 않음
+    return false;
+  }, [isUrlAllowed]);
 
   // 브릿지 초기화 (최초 1회)
   useEffect(() => {
@@ -272,6 +335,7 @@ export default function WebViewContainer() {
         onError={handleError}
         onHttpError={handleHttpError}
         onMessage={handleMessage}
+        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         // 렌더링 프로세스 종료 시 자동 재로드
         onRenderProcessGone={() => {
           console.warn('[WebView] Render process gone, reloading...');

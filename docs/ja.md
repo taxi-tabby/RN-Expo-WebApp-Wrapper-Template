@@ -27,6 +27,22 @@ components\offline-screen.tsx で構成
 ---
 
 
+## URLフィルタリング
+
+`allowedUrlPatterns`で許可するURLパターンを設定。許可されていないURLは外部ブラウザで開く。
+
+```typescript
+allowedUrlPatterns: [
+  'https://example.com',     // 正確なドメイン
+  'https://*.example.com',   // ワイルドカード（サブドメイン）
+],
+// 空の配列は全てのURLを許可
+```
+
+
+---
+
+
 ## ブリッジシステム
 
 ```text

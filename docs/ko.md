@@ -27,6 +27,22 @@ components\offline-screen.tsx 에서 구성됨
 ---
 
 
+## URL 필터링
+
+`allowedUrlPatterns`에 허용할 URL 패턴 설정. 허용되지 않은 URL은 외부 브라우저로 열림.
+
+```typescript
+allowedUrlPatterns: [
+  'https://example.com',     // 정확한 도메인
+  'https://*.example.com',   // 와일드카드 (서브도메인)
+],
+// 빈 배열이면 모든 URL 허용
+```
+
+
+---
+
+
 ## 브릿지 시스템
 
 ```text

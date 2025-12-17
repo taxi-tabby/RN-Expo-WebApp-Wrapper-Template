@@ -27,6 +27,22 @@ Configured in components\offline-screen.tsx
 ---
 
 
+## URL Filtering
+
+Set allowed URL patterns in `allowedUrlPatterns`. Non-allowed URLs open in external browser.
+
+```typescript
+allowedUrlPatterns: [
+  'https://example.com',     // Exact domain
+  'https://*.example.com',   // Wildcard (subdomains)
+],
+// Empty array allows all URLs
+```
+
+
+---
+
+
 ## Bridge System
 
 ```text
