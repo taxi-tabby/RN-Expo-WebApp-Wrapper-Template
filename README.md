@@ -1,50 +1,43 @@
-# Welcome to your Expo app 👋
+# 리엑트네이티브 + EXPO + 웹앱 래퍼
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+##  브릿지 시스템
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+웹 → 앱: app://액션명
+앱 → 웹: native://액션명
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+```javascript
+// 앱 환경 체크
+if (window.AppBridge?.isApp()) {
+  
+  // 1. 단방향 전송 (응답 없음)
+  AppBridge.send('showToast', { message: '안녕하세요!' });
+  AppBridge.send('vibrate');
+  
+  // 2. 요청 후 응답 대기
+  const appInfo = await AppBridge.call('getAppInfo');
+  const deviceInfo = await AppBridge.call('getDeviceInfo');
+  
+  // 3. 앱에서 오는 메시지 수신
+  AppBridge.on('customEvent', (payload) => {
+    console.log('앱에서 받은 데이터:', payload);
+  });
+}
+```
 
-## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
+### 커스텀 핸들러 추가
+```javascript
+import { registerHandler, sendToWeb } from '@/lib/bridge';
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+// 핸들러 등록
+registerHandler('myCustomAction', (payload, respond) => {
+  console.log('받은 데이터:', payload);
+  respond({ result: 'success' });
+});
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+// 앱에서 웹으로 메시지 전송
+sendToWeb('notification', { title: '알림', body: '내용' });
+```

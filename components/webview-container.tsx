@@ -3,24 +3,31 @@
  * 단일 웹 세션을 유지하며 전역 상태와 연동
  */
 
-import React, { useRef, useCallback, useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  ActivityIndicator, 
-  BackHandler, 
-  Platform,
-  Text,
-  Pressable,
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import {
+    ActivityIndicator,
+    BackHandler,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
-import type { 
-  WebViewNavigation,
-  WebViewErrorEvent, 
+import type {
+    WebViewErrorEvent,
+    WebViewNavigation,
+    WebViewMessageEvent,
 } from 'react-native-webview/lib/WebViewTypes';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { APP_CONFIG } from '@/constants/app-config';
+import { 
+  setBridgeWebView, 
+  handleBridgeMessage, 
+  registerBuiltInHandlers 
+} from '@/lib/bridge';
+import { BRIDGE_CLIENT_SCRIPT } from '@/lib/bridge-client';
 
 // WebView 인스턴스를 전역에서 접근 가능하도록 (네비게이션 제어용)
 export let webViewRef: React.RefObject<WebView | null>;
@@ -35,12 +42,26 @@ export default function WebViewContainer() {
   const ref = useRef<WebView>(null);
   webViewRef = ref;
 
-  // 로컬 상태 사용 (무한 루프 방지)
-  const [isLoading, setIsLoading] = useState(true);
+  // 초기 로딩 상태만 관리 (SPA 내부 네비게이션에서는 스피너 표시 안 함)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const [error, setError] = useState<WebViewError | null>(null);
+  const hasLoadedOnce = useRef(false);
 
   const { webview, theme } = APP_CONFIG;
+
+  // 브릿지 초기화
+  useEffect(() => {
+    registerBuiltInHandlers();
+  }, []);
+
+  // WebView ref 변경 시 브릿지에 설정
+  useEffect(() => {
+    if (ref.current) {
+      setBridgeWebView(ref.current);
+    }
+    return () => setBridgeWebView(null);
+  }, [ref.current]);
 
   // Android 하드웨어 뒤로가기 버튼 처리
   useFocusEffect(
@@ -64,18 +85,58 @@ export default function WebViewContainer() {
     setCanGoBack(navState.canGoBack);
   }, []);
 
-  // 로드 시작
+  // 로드 시작 - 초기 로딩 시에만 스피너 표시
   const handleLoadStart = useCallback(() => {
-    setIsLoading(true);
+    if (!hasLoadedOnce.current) {
+      setIsInitialLoading(true);
+    }
     setError(null);
+  }, []);
+
+  // 스플래시 숨기기 헬퍼
+  const doHideSplash = useCallback(() => {
+    const { minDisplayTime } = APP_CONFIG.splash;
+    setTimeout(() => {
+      import('@/app/_layout').then(({ hideSplashScreen }) => {
+        hideSplashScreen();
+      });
+    }, minDisplayTime);
   }, []);
 
   // 로드 완료
   const handleLoadEnd = useCallback(() => {
-    setIsLoading(false);
-  }, []);
+    if (!hasLoadedOnce.current) {
+      hasLoadedOnce.current = true;
+      setIsInitialLoading(false);
+      doHideSplash();
+    }
+  }, [doHideSplash]);
 
-  // 에러 처리
+  // 웹에서 보내는 메시지 처리
+  const handleMessage = useCallback((event: WebViewMessageEvent) => {
+    const messageData = event.nativeEvent.data;
+
+    // 브릿지 메시지 처리 시도
+    if (handleBridgeMessage(messageData)) {
+      return; // 브릿지에서 처리됨
+    }
+
+    // 기존 로직 (hydration 감지 등)
+    try {
+      const data = JSON.parse(messageData);
+      if (data.type === 'HYDRATION_COMPLETE' || data.type === 'PAGE_READY') {
+        if (!hasLoadedOnce.current) {
+          hasLoadedOnce.current = true;
+          setIsInitialLoading(false);
+          doHideSplash();
+        }
+      }
+    } catch {
+      // JSON이 아닌 메시지는 무시
+    }
+  }, [doHideSplash]);
+
+  // 에러 처리 - 에러 시에도 스플래시 숨김
   const handleError = useCallback((event: WebViewErrorEvent) => {
     const { nativeEvent } = event;
     setError({
@@ -83,8 +144,9 @@ export default function WebViewContainer() {
       description: nativeEvent.description,
       url: nativeEvent.url,
     });
-    setIsLoading(false);
-  }, []);
+    setIsInitialLoading(false);
+    doHideSplash();
+  }, [doHideSplash]);
 
   // 재시도 핸들러
   const handleRetry = useCallback(() => {
@@ -111,7 +173,7 @@ export default function WebViewContainer() {
         ref={ref}
         source={{ uri: webview.baseUrl }}
         style={styles.webview}
-        // 데스크톱 Chrome User-Agent (웹 호환성 향상)
+        // User-Agent
         userAgent={webview.userAgent}
         // 기본 옵션
         javaScriptEnabled={webview.options.javaScriptEnabled}
@@ -123,27 +185,50 @@ export default function WebViewContainer() {
         allowsInlineMediaPlayback={webview.options.allowsInlineMediaPlayback}
         allowsBackForwardNavigationGestures={webview.options.allowsBackForwardNavigationGestures}
         allowFileAccess={webview.options.allowFileAccess}
-        // 세션 유지를 위한 설정
+        // 세션 유지
         sharedCookiesEnabled={true}
         incognito={false}
-        // 추가 호환성 옵션
-        javaScriptCanOpenWindowsAutomatically={true}
-        allowsFullscreenVideo={true}
-        allowsProtectedMedia={true}
-        mediaCapturePermissionGrantType="grant"
-        setSupportMultipleWindows={false}
-        overScrollMode="never"
-        textZoom={100}
+        // 성능 최적화 옵션
+        androidLayerType={webview.performance.androidLayerType}
+        overScrollMode={webview.performance.overScrollMode}
+        textZoom={webview.performance.textZoom}
+        nestedScrollEnabled={webview.performance.nestedScrollEnabled}
+        showsHorizontalScrollIndicator={!webview.performance.hideScrollIndicators}
+        showsVerticalScrollIndicator={!webview.performance.hideScrollIndicators}
+        allowsFullscreenVideo={webview.performance.allowsFullscreenVideo}
+        startInLoadingState={false}
+        originWhitelist={['*']}
+        // Android 추가 성능 옵션
+        setSupportMultipleWindows={webview.performance.setSupportMultipleWindows}
+        setBuiltInZoomControls={false}
+        setDisplayZoomControls={false}
         // 이벤트 핸들러
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={handleLoadStart}
         onLoadEnd={handleLoadEnd}
         onError={handleError}
+        onMessage={handleMessage}
+        // 브릿지 클라이언트 + 페이지 로드 감지 스크립트 주입
+        injectedJavaScript={`
+          ${BRIDGE_CLIENT_SCRIPT}
+          (function() {
+            if (document.readyState === 'complete') {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAGE_READY' }));
+            } else {
+              window.addEventListener('load', function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAGE_READY' }));
+              });
+            }
+          })();
+          true;
+        `}
+        // 페이지 이동 시에도 스크립트 재주입
+        injectedJavaScriptBeforeContentLoaded={BRIDGE_CLIENT_SCRIPT}
       />
       
-      {/* 로딩 인디케이터 */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
+      {/* 로딩 인디케이터 - 초기 로딩 시에만 표시 */}
+      {isInitialLoading && (
+        <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator 
             size="large" 
             color={theme.loadingIndicatorColor} 
@@ -166,13 +251,15 @@ export const webViewControls = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   webview: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },

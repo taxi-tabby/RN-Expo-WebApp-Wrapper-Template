@@ -42,6 +42,33 @@ export const APP_CONFIG = {
       allowUniversalAccessFromFileURLs: false,
     },
 
+    // 성능 최적화 옵션 (Android)
+    performance: {
+      // 레이어 타입: 'none' | 'software' | 'hardware'
+      // 'hardware': GPU 사용, 애니메이션 부드러움
+      androidLayerType: 'hardware' as 'none' | 'software' | 'hardware',
+      // 렌더링 우선순위
+      renderPriority: 'high' as 'high' | 'low',
+      // 오버스크롤 모드
+      overScrollMode: 'never' as 'always' | 'content' | 'never',
+      // 텍스트 줌 고정 (100% = 변경없음)
+      textZoom: 100,
+      // 중첩 스크롤 비활성화
+      nestedScrollEnabled: false,
+      // 스크롤바 숨김
+      hideScrollIndicators: true,
+      // 풀스크린 비디오 허용
+      allowsFullscreenVideo: true,
+      // 자동 이미지 로드
+      loadsImagesAutomatically: true,
+      // 뷰포트 초기 스케일
+      initialScale: 100,
+      // 세이프에어리어 포함
+      setSupportMultipleWindows: false,
+      // 포커스 시 자동 줌 비활성화
+      setUseWideViewPort: true,
+    },
+
     // 커스텀 User-Agent
     userAgent: 'webapp-wrapper',
 
@@ -70,14 +97,24 @@ export const APP_CONFIG = {
     loadingIndicatorColor: '#007AFF',
   },
 
-  // 스플래시 스크린 설정
+  // 커스텀 스플래시 스크린 설정
   splash: {
-    // 최소 표시 시간 (ms)
-    minDisplayTime: 1500,
+    // 스플래시 활성화 여부
+    enabled: true,
+    // 최소 표시 시간 (ms) - 0이면 WebView 로드 즉시 숨김
+    minDisplayTime: 1000,
     // 페이드 아웃 시간 (ms)
     fadeOutDuration: 300,
-    // WebView 로드 완료까지 대기
-    waitForWebViewLoad: true,
+    // 배경색
+    backgroundColor: '#ffffff',
+    // 다크모드 배경색
+    darkBackgroundColor: '#000000',
+    // 로고 이미지 (null이면 텍스트만)
+    logoImage: null as string | null,
+    // 로딩 텍스트
+    loadingText: '로딩 중...',
+    // 로딩 인디케이터 표시
+    showLoadingIndicator: true,
   },
 
   // 기능 플래그 (추후 확장용)

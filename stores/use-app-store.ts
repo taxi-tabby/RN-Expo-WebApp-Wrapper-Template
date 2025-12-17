@@ -5,16 +5,15 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
 
 import { APP_CONFIG } from '@/constants/app-config';
-import type { 
-  RootStore, 
-  WebviewState, 
-  AppState,
-  WebviewError 
-} from './types';
 import type { WebViewNavigation } from 'react-native-webview';
+import type {
+    AppState,
+    RootStore,
+    WebviewError,
+    WebviewState
+} from './types';
 
 // ============================================
 // 초기 상태
