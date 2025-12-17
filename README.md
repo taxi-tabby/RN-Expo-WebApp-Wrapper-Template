@@ -113,3 +113,19 @@ npx eas build --platform android --profile preview
 ## 📄 License
 
 MIT License
+
+
+---
+
+
+## 👥 Contributors
+
+<a href="https://github.com/taxi-tabby">
+  <img src="https://github.com/taxi-tabby.png" width="50" height="50" alt="taxi-tabby" style="border-radius: 50%;" />
+</a>
+
+<!-- Add contributors here -->
+<!-- Example: -->
+<!-- <a href="https://github.com/username"><img src="https://github.com/username.png" width="50" height="50" alt="username" /></a> -->
+
+
