@@ -5,13 +5,13 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useColorScheme,
+    ActivityIndicator,
+    Animated,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useColorScheme,
 } from 'react-native';
 
 import { APP_CONFIG } from '@/constants/app-config';
