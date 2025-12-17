@@ -41,6 +41,8 @@ components\offline-screen.tsx 에서 구성됨
 | **웹 → 앱** | `AppBridge.send()` | `registerHandler()` | 단방향 전송 (응답 없음) |
 | **웹 → 앱** | `AppBridge.call()` | `registerHandler()` | 요청 후 응답 대기 (Promise) |
 | **앱 → 웹** | `sendToWeb()` | `AppBridge.on()` | 단방향 전송 (응답 없음) |
+| **앱 → 웹** | `sendToWeb()` | `AppBridge.once()` | 단방향 전송 (한 번만 수신) |
+| **앱 → 웹** | `sendToWeb()` | `AppBridge.waitFor()` | 타임아웃까지 대기 (Promise) |
 | **앱 → 웹** | `callWeb()` | `AppBridge.on()` | 요청 후 응답 대기 (Promise) |
 
 
