@@ -76,6 +76,46 @@ export const BRIDGE_CLIENT_SCRIPT = `
     },
 
     /**
+     * 한 번만 메시지 수신 후 자동 해제
+     * @param {string} action - 액션명
+     * @param {function} callback - 콜백 함수
+     */
+    once: function(action, callback) {
+      var self = this;
+      var wrapper = function(payload, message) {
+        self.off(action, wrapper);
+        callback(payload, message);
+      };
+      this.on(action, wrapper);
+    },
+
+    /**
+     * 특정 액션 메시지를 타임아웃까지 대기 (Promise)
+     * @param {string} action - 액션명
+     * @param {number} timeout - 타임아웃 (ms, 기본 10초)
+     * @returns {Promise}
+     */
+    waitFor: function(action, timeout) {
+      var self = this;
+      timeout = timeout || 10000;
+      
+      return new Promise(function(resolve, reject) {
+        var timer = setTimeout(function() {
+          self.off(action, handler);
+          reject(new Error('Timeout waiting for: ' + action));
+        }, timeout);
+
+        var handler = function(payload, message) {
+          clearTimeout(timer);
+          self.off(action, handler);
+          resolve({ payload: payload, message: message });
+        };
+
+        self.on(action, handler);
+      });
+    },
+
+    /**
      * 리스너 해제
      */
     off: function(action, callback) {

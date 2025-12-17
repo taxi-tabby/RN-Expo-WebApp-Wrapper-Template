@@ -45,17 +45,57 @@ export const setBridgeWebView = (webView: WebView | null) => {
   webViewInstance = webView;
 };
 
+// 핸들러 옵션 타입
+export interface HandlerOptions {
+  /** 응답 타임아웃 (ms). 설정 시 응답이 없으면 자동 에러 응답 */
+  timeout?: number;
+  /** 한 번만 실행 후 자동 해제 */
+  once?: boolean;
+}
+
 /**
  * 핸들러 등록
  * @param action 액션명 (예: 'getDeviceInfo', 'showToast')
  * @param handler 핸들러 함수
+ * @param options 핸들러 옵션 (timeout, once)
  */
 export const registerHandler = <T = unknown, R = unknown>(
   action: string,
-  handler: BridgeHandler<T, R>
+  handler: BridgeHandler<T, R>,
+  options?: HandlerOptions
 ) => {
-  handlers.set(action, handler as BridgeHandler);
-  console.log(`[Bridge] Handler registered: ${action}`);
+  const wrappedHandler: BridgeHandler = (payload, respond) => {
+    let responded = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // 타임아웃 설정
+    if (options?.timeout) {
+      timer = setTimeout(() => {
+        if (!responded) {
+          responded = true;
+          respond({ success: false, error: `Handler timeout: ${action}` });
+        }
+      }, options.timeout);
+    }
+
+    // 응답 함수 래핑
+    const wrappedRespond = (data: unknown) => {
+      if (responded) return;
+      responded = true;
+      if (timer) clearTimeout(timer);
+      respond(data);
+    };
+
+    // once 옵션
+    if (options?.once) {
+      handlers.delete(action);
+    }
+
+    handler(payload as T, wrappedRespond as (data: R) => void);
+  };
+
+  handlers.set(action, wrappedHandler);
+  console.log(`[Bridge] Handler registered: ${action}`, options || '');
 };
 
 /**

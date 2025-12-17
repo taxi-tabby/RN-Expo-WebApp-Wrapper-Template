@@ -76,6 +76,8 @@ if (window.AppBridge?.isApp()) {
 | `send(action, payload)` | 앱으로 메시지 전송 (응답 없음) |
 | `call(action, payload, timeout)` | 앱으로 메시지 전송 후 응답 대기 (Promise 반환) |
 | `on(action, callback)` | 앱에서 온 메시지 리스너 등록 (`*`로 모든 메시지 수신 가능) |
+| `once(action, callback)` | 한 번만 메시지 수신 후 자동 해제 |
+| `waitFor(action, timeout)` | 특정 메시지를 타임아웃까지 대기 (Promise 반환) |
 | `off(action, callback)` | 등록된 리스너 해제 |
 | `isApp()` | 앱 환경인지 체크 (ReactNativeWebView 존재 여부) |
 
@@ -95,6 +97,12 @@ interface AppBridge {
   
   /** 앱에서 온 메시지 리스너 등록 ('*'로 모든 메시지 수신 가능) */
   on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 한 번만 메시지 수신 후 자동 해제 */
+  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 특정 메시지를 타임아웃까지 대기 (Promise 반환) */
+  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
   
   /** 등록된 리스너 해제 */
   off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
@@ -127,6 +135,17 @@ registerHandler('myCustomAction', (payload, respond) => {
   respond({ result: 'success' });
 });
 
+// 타임아웃 옵션으로 핸들러 등록 (5초 내 응답 없으면 자동 에러)
+registerHandler('heavyTask', async (payload, respond) => {
+  const result = await doSomething();
+  respond(result);
+}, { timeout: 5000 });
+
+// 한 번만 실행되는 핸들러
+registerHandler('oneTimeAction', (payload, respond) => {
+  respond({ done: true });
+}, { once: true });
+
 // 앱에서 웹으로 메시지 전송 (웹에서 on 메서드로 대기)
 sendToWeb('notification', { title: '알림', body: '내용' });
 ```
@@ -136,7 +155,7 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 | 함수 | 설명 |
 |------|------|
 | `setBridgeWebView(webView)` | WebView 인스턴스 설정 (필수, 브릿지 연결용) |
-| `registerHandler(action, handler)` | 웹에서 호출할 핸들러 등록 |
+| `registerHandler(action, handler, options?)` | 웹에서 호출할 핸들러 등록. options: `{ timeout?, once? }` |
 | `unregisterHandler(action)` | 등록된 핸들러 해제 |
 | `clearHandlers()` | 모든 핸들러 해제 |
 | `handleBridgeMessage(messageData)` | 웹에서 온 메시지 처리 (WebView onMessage에서 사용) |
