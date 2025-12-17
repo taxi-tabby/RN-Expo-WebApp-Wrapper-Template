@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 import 'react-native-reanimated';
 
 import CustomSplash from '@/components/custom-splash';
+import { APP_CONFIG } from '@/constants/app-config';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // 스플래시 상태를 전역에서 제어하기 위한 콜백
@@ -22,6 +23,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [showSplash, setShowSplash] = useState(true);
   const [splashFullyHidden, setSplashFullyHidden] = useState(false);
+  const { statusBar } = APP_CONFIG;
 
   // 외부에서 호출 가능한 숨김 함수 등록
   hideSplashCallback = useCallback(() => {
@@ -37,7 +39,14 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
       </Stack>
-      <StatusBar style="auto" />
+      
+      {/* 상태바 설정 */}
+      <StatusBar 
+        style={statusBar.style}
+        hidden={!statusBar.visible}
+        backgroundColor={statusBar.backgroundColor}
+        translucent={statusBar.translucent}
+      />
       
       {/* 커스텀 스플래시 - 페이드아웃 완료 전까지 렌더링 */}
       {!splashFullyHidden && (

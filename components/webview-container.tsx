@@ -6,26 +6,26 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    BackHandler,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  BackHandler,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type {
-    WebViewErrorEvent,
-    WebViewMessageEvent,
-    WebViewNavigation,
+  WebViewErrorEvent,
+  WebViewMessageEvent,
+  WebViewNavigation,
 } from 'react-native-webview/lib/WebViewTypes';
 
 import { APP_CONFIG } from '@/constants/app-config';
 import {
-    handleBridgeMessage,
-    registerBuiltInHandlers,
-    setBridgeWebView
+  handleBridgeMessage,
+  registerBuiltInHandlers,
+  setBridgeWebView
 } from '@/lib/bridge';
 import { BRIDGE_CLIENT_SCRIPT } from '@/lib/bridge-client';
 
@@ -121,9 +121,10 @@ export default function WebViewContainer() {
       return; // 브릿지에서 처리됨
     }
 
-    // 기존 로직 (hydration 감지 등)
+    // 기존 로직 (hydration 감지)
     try {
       const data = JSON.parse(messageData);
+      
       if (data.type === 'HYDRATION_COMPLETE' || data.type === 'PAGE_READY') {
         if (!hasLoadedOnce.current) {
           hasLoadedOnce.current = true;
@@ -135,7 +136,6 @@ export default function WebViewContainer() {
       // JSON이 아닌 메시지는 무시
     }
   }, [doHideSplash]);
-
   // 에러 처리 - 에러 시에도 스플래시 숨김
   const handleError = useCallback((event: WebViewErrorEvent) => {
     const { nativeEvent } = event;
@@ -208,10 +208,11 @@ export default function WebViewContainer() {
         onLoadEnd={handleLoadEnd}
         onError={handleError}
         onMessage={handleMessage}
-        // 브릿지 클라이언트 + 페이지 로드 감지 스크립트 주입
+        // 브릿지 클라이언트 + 페이지 로드 스크립트 주입
         injectedJavaScript={`
           ${BRIDGE_CLIENT_SCRIPT}
           (function() {
+            // 페이지 로드 감지
             if (document.readyState === 'complete') {
               window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAGE_READY' }));
             } else {

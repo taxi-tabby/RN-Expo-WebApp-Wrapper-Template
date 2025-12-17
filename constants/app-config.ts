@@ -87,10 +87,46 @@ export const APP_CONFIG = {
     retryCount: 3,
   },
 
+  // 상태바 & SafeArea 설정
+  statusBar: {
+    // 상태바 표시 여부
+    visible: true,
+    // 상태바 스타일: 'auto' | 'light' | 'dark'
+    // 'light': 흰색 아이콘 (어두운 배경일 때)
+    // 'dark': 검은색 아이콘 (밝은 배경일 때)
+    // 'auto': 시스템 테마에 따름
+    style: 'light' as 'auto' | 'light' | 'dark',
+
+    // 상태바와 웹뷰 겹침 여부
+    // true: 웹뷰가 상태바 영역까지 확장됨 (G-Market 스타일)
+    // false: 웹뷰가 상태바 아래부터 시작 (일반적인 앱)
+    overlapsWebView: false,
+
+    // 상태바 오버레이 표시 (웹뷰 위에 반투명 배경, overlapsWebView가 true일 때만 유효)
+    showOverlay: true,
+
+    // 상태바 오버레이 색상 (반투명 검정 등)
+    // rgba 또는 8자리 Hex 사용
+    overlayColor: 'rgba(0,0,0,0.5)',
+
+    // 상태바 반투명 여부 (Android) - overlapsWebView와 함께 사용
+    translucent: true,
+  },
+
+  // SafeArea 설정
+  safeArea: {
+    // SafeArea 사용 여부 (false면 웹뷰가 상태바 뒤까지 확장)
+    enabled: false,
+    // 적용할 영역: 'all' | 'top' | 'bottom' | 'none'
+    edges: 'none' as 'all' | 'top' | 'bottom' | 'none',
+    // SafeArea 배경색
+    backgroundColor: '#ffffff',
+    // 다크모드 SafeArea 배경색
+    darkBackgroundColor: '#000000',
+  },
+
   // 테마 설정
   theme: {
-    // 상태바 스타일
-    statusBarStyle: 'auto' as 'auto' | 'light' | 'dark',
     // 웹뷰 배경색
     webviewBackgroundColor: '#FFFFFF',
     // 로딩 인디케이터 색상
