@@ -115,6 +115,21 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 ```
 
 
+### 브릿지 함수 (React Native 측)
+
+| 함수 | 설명 |
+|------|------|
+| `setBridgeWebView(webView)` | WebView 인스턴스 설정 (필수, 브릿지 연결용) |
+| `registerHandler(action, handler)` | 웹에서 호출할 핸들러 등록 |
+| `unregisterHandler(action)` | 등록된 핸들러 해제 |
+| `clearHandlers()` | 모든 핸들러 해제 |
+| `handleBridgeMessage(messageData)` | 웹에서 온 메시지 처리 (WebView onMessage에서 사용) |
+| `sendToWeb(action, payload)` | 앱에서 웹으로 메시지 전송 |
+| `callWeb(action, payload, timeout)` | 앱에서 웹으로 요청 후 응답 대기 (Promise) |
+| `registerBuiltInHandlers()` | 기본 내장 핸들러 일괄 등록 |
+
+
+
 ### 기본 내장 핸들러 (Built-in Handlers)
 
 | 액션명 | 페이로드 | 응답 | 설명 |
