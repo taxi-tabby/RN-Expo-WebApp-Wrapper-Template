@@ -1,11 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import CustomSplash from '@/components/custom-splash';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // 스플래시 상태를 전역에서 제어하기 위한 콜백
 let hideSplashCallback: (() => void) | null = null;

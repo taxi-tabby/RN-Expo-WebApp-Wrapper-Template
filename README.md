@@ -1,6 +1,16 @@
 # 리엑트네이티브 + EXPO + 웹앱 래퍼
 
 
+## 환경 설정
+```
+constants\app-config.ts 에서 가능
+```
+
+## 테마 설정
+```
+constants\theme.ts 에서 가능
+```
+
 ##  브릿지 시스템
 
 ```text

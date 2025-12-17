@@ -4,7 +4,7 @@
  */
 
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     BackHandler,
@@ -17,15 +17,15 @@ import {
 import { WebView } from 'react-native-webview';
 import type {
     WebViewErrorEvent,
-    WebViewNavigation,
     WebViewMessageEvent,
+    WebViewNavigation,
 } from 'react-native-webview/lib/WebViewTypes';
 
 import { APP_CONFIG } from '@/constants/app-config';
-import { 
-  setBridgeWebView, 
-  handleBridgeMessage, 
-  registerBuiltInHandlers 
+import {
+    handleBridgeMessage,
+    registerBuiltInHandlers,
+    setBridgeWebView
 } from '@/lib/bridge';
 import { BRIDGE_CLIENT_SCRIPT } from '@/lib/bridge-client';
 
