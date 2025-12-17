@@ -64,37 +64,66 @@ goto MENU
 :LOCAL_BUILD
 cls
 echo ============================================
-echo         로컬 빌드 프로필 선택
+echo         로컬 빌드 (Gradle 직접)
 echo ============================================
 echo.
-echo  [1] development (개발용)
-echo  [2] preview (테스트용 APK)
-echo  [3] production (출시용 AAB)
+echo  [1] Debug APK (개발/테스트용)
+echo  [2] Release APK (배포용)
+echo  [3] Release AAB (Play Store용)
 echo  [4] 뒤로가기
 echo.
 set /p profile="선택하세요 (1-4): "
 
-if "%profile%"=="1" set BUILD_PROFILE=development
-if "%profile%"=="2" set BUILD_PROFILE=preview
-if "%profile%"=="3" set BUILD_PROFILE=production
+if "%profile%"=="1" goto BUILD_DEBUG
+if "%profile%"=="2" goto BUILD_RELEASE_APK
+if "%profile%"=="3" goto BUILD_RELEASE_AAB
 if "%profile%"=="4" goto MENU
+echo [오류] 잘못된 선택입니다.
+timeout /t 2 >nul
+goto LOCAL_BUILD
 
-if not defined BUILD_PROFILE (
-    echo [오류] 잘못된 선택입니다.
-    timeout /t 2 >nul
-    goto LOCAL_BUILD
-)
-
+:BUILD_DEBUG
 echo.
-echo ▶ 로컬 빌드 시작: %BUILD_PROFILE%
+echo ▶ Debug APK 빌드 시작...
 echo ============================================
-echo.
-echo [팁] 메모리 부족 시 Gradle 캐시 정리(옵션 3)를 먼저 실행하세요.
-echo.
-call npx eas build --platform android --profile %BUILD_PROFILE% --local
+call npx expo prebuild --platform android
+cd android
+call gradlew assembleDebug
+cd ..
 echo.
 echo ============================================
-echo 빌드 완료! 결과물 위치 확인하세요.
+echo 빌드 완료!
+echo 결과물: android\app\build\outputs\apk\debug\app-debug.apk
+pause
+goto MENU
+
+:BUILD_RELEASE_APK
+echo.
+echo ▶ Release APK 빌드 시작...
+echo ============================================
+call npx expo prebuild --platform android
+cd android
+call gradlew assembleRelease
+cd ..
+echo.
+echo ============================================
+echo 빌드 완료!
+echo 결과물: android\app\build\outputs\apk\release\app-release.apk
+pause
+goto MENU
+
+:BUILD_RELEASE_AAB
+echo.
+echo ▶ Release AAB 빌드 시작...
+echo ============================================
+call npx expo prebuild --platform android
+cd android
+call gradlew bundleRelease
+cd ..
+echo.
+echo ============================================
+echo 빌드 완료!
+echo 결과물: android\app\build\outputs\bundle\release\app-release.aab
 pause
 goto MENU
 
