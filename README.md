@@ -103,7 +103,7 @@ interface AppBridge {
   /** 한 번만 메시지 수신 후 자동 해제 */
   once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
   
-  /** 특정 메시지를 타임아웃까지 대기 (Promise 반환) */
+  /** 특정 메시지를 타임아웃까지 대기 (Promise 반환) (once의 promise 버전) */
   waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
   
   /** 등록된 리스너 해제 */
