@@ -62,6 +62,21 @@ export default function WebViewContainer() {
 
   const { webview, theme, debug } = APP_CONFIG;
 
+  // 컴포넌트 마운트 시 디버그 로그
+  useEffect(() => {
+    debugLog('info', 'WebViewContainer 마운트됨', 
+      `baseUrl: ${webview.baseUrl}\n` +
+      `isInitialLoading: ${isInitialLoading}\n` +
+      `Platform: ${Platform.OS}`
+    );
+    // 초기 로드 시작 시간 설정
+    loadStartTime.current = Date.now();
+    
+    return () => {
+      debugLog('info', 'WebViewContainer 언마운트됨');
+    };
+  }, []);
+
   /**
    * URL이 허용된 패턴과 일치하는지 확인
    * allowedUrlPatterns에 정의된 패턴과 매칭
@@ -206,10 +221,17 @@ export default function WebViewContainer() {
 
   // 로드 시작 - 초기 로딩 시에만 스피너 표시
   const handleLoadStart = useCallback(() => {
-    loadStartTime.current = Date.now();
-    debugLog('event', '페이지 로드 시작', `URL: ${webview.baseUrl}\nhasLoadedOnce: ${hasLoadedOnce.current}`);
+    const now = Date.now();
+    debugLog('event', '🚀 페이지 로드 시작', 
+      `URL: ${webview.baseUrl}\n` +
+      `hasLoadedOnce: ${hasLoadedOnce.current}\n` +
+      `이전 loadStartTime: ${loadStartTime.current}\n` +
+      `현재 시간: ${now}`
+    );
+    loadStartTime.current = now;
     
     if (!hasLoadedOnce.current) {
+      debugLog('info', '초기 로딩 - 스피너 표시 및 타임아웃 시작');
       setIsInitialLoading(true);
       startLoadingTimeout(); // 타임아웃 시작
     }
@@ -241,8 +263,15 @@ export default function WebViewContainer() {
   // 로드 완료
   const handleLoadEnd = useCallback(() => {
     clearLoadingTimeout(); // 타임아웃 클리어
-    const loadTime = Date.now() - loadStartTime.current;
-    debugLog('success', '페이지 로드 완료', `로드 시간: ${loadTime}ms\nhasLoadedOnce: ${hasLoadedOnce.current}`);
+    const now = Date.now();
+    const loadTime = now - loadStartTime.current;
+    debugLog('success', '✅ 페이지 로드 완료', 
+      `로드 시간: ${loadTime}ms\n` +
+      `hasLoadedOnce: ${hasLoadedOnce.current}\n` +
+      `loadStartTime: ${loadStartTime.current}\n` +
+      `현재 시간: ${now}\n` +
+      `isInitialLoading 변경: true → false`
+    );
     
     if (!hasLoadedOnce.current) {
       hasLoadedOnce.current = true;
@@ -255,7 +284,6 @@ export default function WebViewContainer() {
   // 웹에서 보내는 메시지 처리
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     const messageData = event.nativeEvent.data;
-    debugLog('event', '웹 메시지 수신', messageData.substring(0, 200));
 
     // 브릿지 메시지 처리 시도
     if (handleBridgeMessage(messageData)) {
@@ -267,13 +295,39 @@ export default function WebViewContainer() {
     try {
       const data = JSON.parse(messageData);
       
+      // 디버그: DOM 상태 정보
+      if (data.type === 'DEBUG_DOM_STATE') {
+        debugLog('info', '🔍 DOM 상태 확인',
+          `readyState: ${data.readyState}\n` +
+          `URL: ${data.url}\n` +
+          `Title: ${data.title}\n` +
+          `Body 길이: ${data.bodyLength}\n` +
+          `Body 배경: ${data.bodyBg}\n` +
+          `HTML 배경: ${data.htmlBg}\n` +
+          `Body 미리보기: ${data.bodyPreview?.substring(0, 100)}...`
+        );
+        return;
+      }
+      
+      // 디버그: JS 에러
+      if (data.type === 'JS_ERROR') {
+        debugLog('error', '⚠️ 웹페이지 JS 에러',
+          `메시지: ${data.message}\n` +
+          `위치: ${data.url}:${data.line}:${data.col}\n` +
+          `에러: ${data.error}`
+        );
+        return;
+      }
+      
       if (data.type === 'HYDRATION_COMPLETE' || data.type === 'PAGE_READY') {
-        debugLog('success', `${data.type} 이벤트 수신`);
+        debugLog('success', `✅ ${data.type} 이벤트 수신`);
         if (!hasLoadedOnce.current) {
           hasLoadedOnce.current = true;
           setIsInitialLoading(false);
           doHideSplash();
         }
+      } else {
+        debugLog('event', '웹 메시지 수신', `type: ${data.type}\n${messageData.substring(0, 150)}`);
       }
     } catch {
       // JSON이 아닌 메시지는 무시
@@ -403,18 +457,59 @@ export default function WebViewContainer() {
         // 렌더링 프로세스 종료 시 자동 재로드
         onRenderProcessGone={handleRenderProcessGone}
         onContentProcessDidTerminate={handleContentProcessDidTerminate}
+        // 레이아웃 변경 감지
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          debugLog('info', '📐 WebView 레이아웃', `width: ${width}, height: ${height}`);
+        }}
         // 브릿지 클라이언트 + 페이지 로드 스크립트 주입
         injectedJavaScript={`
           ${BRIDGE_CLIENT_SCRIPT}
           (function() {
+            // 디버그: DOM 상태 확인
+            function checkDOMState() {
+              var bodyContent = document.body ? document.body.innerHTML.substring(0, 200) : 'NO BODY';
+              var docState = document.readyState;
+              var bodyBg = document.body ? window.getComputedStyle(document.body).backgroundColor : 'N/A';
+              var htmlBg = document.documentElement ? window.getComputedStyle(document.documentElement).backgroundColor : 'N/A';
+              
+              window.ReactNativeWebView.postMessage(JSON.stringify({ 
+                type: 'DEBUG_DOM_STATE',
+                readyState: docState,
+                bodyBg: bodyBg,
+                htmlBg: htmlBg,
+                bodyLength: document.body ? document.body.innerHTML.length : 0,
+                bodyPreview: bodyContent,
+                url: window.location.href,
+                title: document.title
+              }));
+            }
+            
             // 페이지 로드 감지
             if (document.readyState === 'complete') {
+              checkDOMState();
               window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAGE_READY' }));
             } else {
               window.addEventListener('load', function() {
+                checkDOMState();
                 window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'PAGE_READY' }));
               });
             }
+            
+            // 에러 감지
+            window.onerror = function(msg, url, line, col, error) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'JS_ERROR',
+                message: msg,
+                url: url,
+                line: line,
+                col: col,
+                error: error ? error.toString() : null
+              }));
+            };
+            
+            // 3초 후에도 DOM 상태 재확인 (지연 렌더링 감지용)
+            setTimeout(checkDOMState, 3000);
           })();
           true;
         `}
@@ -430,10 +525,27 @@ export default function WebViewContainer() {
             color={theme.loadingIndicatorColor} 
           />
           {debug.enabled && (
-            <Text style={styles.loadingProgressText}>
-              {loadProgress}%
-            </Text>
+            <View style={styles.loadingDebugInfo}>
+              <Text style={styles.loadingProgressText}>
+                로딩 중... {loadProgress}%
+              </Text>
+              <Text style={styles.loadingDebugText}>
+                isInitialLoading: true
+              </Text>
+              <Text style={styles.loadingDebugText}>
+                hasLoadedOnce: {hasLoadedOnce.current ? 'true' : 'false'}
+              </Text>
+            </View>
           )}
+        </View>
+      )}
+      
+      {/* 디버그: 상태 표시 (흰 화면 디버깅용) */}
+      {debug.enabled && !isInitialLoading && (
+        <View style={styles.debugStatusBar} pointerEvents="none">
+          <Text style={styles.debugStatusText}>
+            ✓ 로딩완료 | Progress: {loadProgress}% | hasLoaded: {hasLoadedOnce.current ? 'Y' : 'N'}
+          </Text>
         </View>
       )}
       
@@ -474,6 +586,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontFamily: 'monospace',
+  },
+  loadingDebugInfo: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  loadingDebugText: {
+    fontSize: 10,
+    color: '#999',
+    fontFamily: 'monospace',
+  },
+  debugStatusBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(39, 174, 96, 0.9)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  debugStatusText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,

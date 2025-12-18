@@ -5,13 +5,12 @@
 
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
-    Animated,
     Dimensions,
-    PanResponder,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -67,36 +66,12 @@ export const debugLog = (level: LogLevel, message: string, details?: string) => 
 export const DebugOverlay = React.forwardRef<DebugOverlayRef, DebugOverlayProps>(
   ({ visible = true }, ref) => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    const [isMinimized, setIsMinimized] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(true); // 기본값: 최소화 상태로 시작
     const [isExpanded, setIsExpanded] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
-    const fadeAnim = useRef(new Animated.Value(1)).current;
     
     const { debug } = APP_CONFIG;
     const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-    // 드래그 관련
-    const pan = useRef(new Animated.ValueXY({ x: 10, y: 60 })).current;
-    
-    const panResponder = useRef(
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          pan.setOffset({
-            x: (pan.x as any)._value,
-            y: (pan.y as any)._value,
-          });
-        },
-        onPanResponderMove: Animated.event(
-          [null, { dx: pan.x, dy: pan.y }],
-          { useNativeDriver: false }
-        ),
-        onPanResponderRelease: () => {
-          pan.flattenOffset();
-        },
-      })
-    ).current;
 
     // 로그 추가
     const addLog = useCallback((level: LogLevel, message: string, details?: string) => {
@@ -179,55 +154,66 @@ export const DebugOverlay = React.forwardRef<DebugOverlayRef, DebugOverlayProps>
       }
     };
 
-    // 최소화 상태
+    // 최소화 상태 - 우측 하단에 플로팅 버튼
     if (isMinimized) {
       return (
-        <Animated.View
-          style={[
-            styles.minimizedContainer,
-            { transform: [{ translateX: pan.x }, { translateY: pan.y }] },
-          ]}
-          {...panResponder.panHandlers}
-        >
-          <Pressable
+        <View style={styles.minimizedContainer}>
+          <TouchableOpacity
             onPress={() => setIsMinimized(false)}
-            style={styles.minimizedButton}
+            style={[
+              styles.minimizedButton,
+              logs.some(l => l.level === 'error') && styles.minimizedButtonError
+            ]}
+            activeOpacity={0.7}
           >
             <Text style={styles.minimizedText}>
-              🔍 {logs.length}
+              🐛 {logs.length}
+              {logs.filter(l => l.level === 'error').length > 0 && 
+                ` (${logs.filter(l => l.level === 'error').length}❌)`
+              }
             </Text>
-          </Pressable>
-        </Animated.View>
+          </TouchableOpacity>
+        </View>
       );
     }
 
-    const containerHeight = isExpanded ? screenHeight * 0.7 : 200;
+    const containerHeight = isExpanded ? screenHeight * 0.7 : 220;
 
     return (
-      <Animated.View
+      <View
         style={[
           styles.container,
           {
-            opacity: fadeAnim,
             height: containerHeight,
             maxWidth: screenWidth - 20,
           },
         ]}
-        pointerEvents="box-none"
       >
         {/* 헤더 */}
-        <View style={styles.header} {...panResponder.panHandlers}>
+        <View style={styles.header}>
           <Text style={styles.headerTitle}>🐛 Debug Log</Text>
           <View style={styles.headerButtons}>
-            <Pressable onPress={() => setIsExpanded(!isExpanded)} style={styles.headerButton}>
+            <TouchableOpacity 
+              onPress={() => setIsExpanded(!isExpanded)} 
+              style={styles.headerButton}
+              activeOpacity={0.6}
+            >
               <Text style={styles.headerButtonText}>{isExpanded ? '▼' : '▲'}</Text>
-            </Pressable>
-            <Pressable onPress={clearLogs} style={styles.headerButton}>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={clearLogs} 
+              style={styles.headerButton}
+              activeOpacity={0.6}
+            >
               <Text style={styles.headerButtonText}>🗑️</Text>
-            </Pressable>
-            <Pressable onPress={() => setIsMinimized(true)} style={styles.headerButton}>
-              <Text style={styles.headerButtonText}>➖</Text>
-            </Pressable>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setIsMinimized(true)} 
+              style={styles.headerButton}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.headerButtonText}>✕</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -282,7 +268,7 @@ export const DebugOverlay = React.forwardRef<DebugOverlayRef, DebugOverlayProps>
             {logs.length} total
           </Text>
         </View>
-      </Animated.View>
+      </View>
     );
   }
 );
@@ -324,10 +310,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerButton: {
-    padding: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginLeft: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 4,
   },
   headerButtonText: {
     fontSize: 16,
+    color: '#fff',
   },
   logList: {
     flex: 1,
@@ -381,18 +372,26 @@ const styles = StyleSheet.create({
   },
   minimizedContainer: {
     position: 'absolute',
+    bottom: 100,
+    right: 10,
     zIndex: 9999,
   },
   minimizedButton: {
-    backgroundColor: 'rgba(26, 26, 46, 0.9)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    elevation: 5,
+    backgroundColor: 'rgba(26, 26, 46, 0.95)',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  minimizedButtonError: {
+    backgroundColor: 'rgba(231, 76, 60, 0.95)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   minimizedText: {
     color: '#fff',
