@@ -24,28 +24,39 @@ export const APP_CONFIG = {
     
     // 웹뷰 기본 옵션
     options: {
+
       // JavaScript 활성화
       javaScriptEnabled: true,
+
       // DOM 스토리지 활성화 (localStorage, sessionStorage)
       domStorageEnabled: true,
+
       // 서드파티 쿠키 허용
       thirdPartyCookiesEnabled: true,
+
       // 미디어 자동재생 허용
-      mediaPlaybackRequiresUserAction: false,
+      mediaPlaybackRequiresUserAction: true,
+
       // 혼합 컨텐츠 허용 (HTTPS 페이지에서 HTTP 리소스)
       mixedContentMode: 'compatibility' as const,
+
       // 캐시 모드
       cacheEnabled: true,
+
       // 줌 허용
       scalesPageToFit: true,
+
       // 인라인 미디어 재생 허용 (iOS)
       allowsInlineMediaPlayback: true,
+
       // 백그라운드에서도 미디어 재생 (iOS)
       allowsBackForwardNavigationGestures: true,
+
       // 파일 접근 허용 (Android)
       allowFileAccess: true,
+
       // 유니버설 링크 허용 (Android)
-      allowUniversalAccessFromFileURLs: false,
+      allowUniversalAccessFromFileURLs: true,
     },
 
     // 성능 최적화 옵션 (Android)
