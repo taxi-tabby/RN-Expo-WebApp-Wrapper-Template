@@ -14,7 +14,7 @@ export const APP_CONFIG = {
   // 웹뷰 설정
   webview: {
     // 메인 웹사이트 URL
-    baseUrl: 'https://gdjs.link/',
+    baseUrl: 'https://anilife.app/',
     
     // 웹뷰 기본 옵션
     options: {

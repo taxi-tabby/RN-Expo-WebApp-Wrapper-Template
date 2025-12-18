@@ -254,19 +254,15 @@ export default function WebViewContainer() {
     try {
       const data = JSON.parse(messageData);
       
-      // 디버그: DOM 상태 정보 (흰 화면 디버깅용)
+      // DOM 상태 체크 (빈 화면 자동 복구용)
       if (data.type === 'DEBUG_DOM_STATE') {
-        debugLog('info', '🔍 DOM 상태',
-          `body: ${data.bodyLength}글자 | bg: ${data.bodyBg}`
-        );
-        
-        // body가 비어있으면 자동 재로드 시도
+        // body가 비어있을 때만 로그 & 재로드
         if (data.bodyLength === 0) {
           emptyBodyRetryCount.current += 1;
+          debugLog('warn', `⚠️ 빈 화면! (${emptyBodyRetryCount.current}차)`);
           
           if (emptyBodyRetryCount.current <= MAX_EMPTY_BODY_RETRIES) {
             // 1~2차: 일반 재로드
-            debugLog('warn', `⚠️ 빈 화면! 재로드 ${emptyBodyRetryCount.current}/${MAX_EMPTY_BODY_RETRIES}`);
             setTimeout(() => ref.current?.reload(), 500);
           } else if (emptyBodyRetryCount.current === MAX_EMPTY_BODY_RETRIES + 1) {
             // 3차: 캐시 삭제 후 WebView 재생성
@@ -274,10 +270,8 @@ export default function WebViewContainer() {
             emptyBodyRetryCount.current = 0;
             hasLoadedOnce.current = false;
             setIsInitialLoading(true);
-            setCacheMode(false); // 캐시 비활성화
-            setWebViewKey(prev => prev + 1); // WebView 완전 재생성
-            
-            // 다음 로드 후 캐시 다시 활성화
+            setCacheMode(false);
+            setWebViewKey(prev => prev + 1);
             setTimeout(() => setCacheMode(true), 3000);
           }
         } else if (data.bodyLength > 0) {
