@@ -22,6 +22,7 @@ import type {
   WebViewHttpErrorEvent,
   WebViewMessageEvent,
   WebViewNavigation,
+  WebViewProgressEvent,
 } from 'react-native-webview/lib/WebViewTypes';
 
 import { APP_CONFIG } from '@/constants/app-config';
@@ -31,6 +32,7 @@ import {
   setBridgeWebView
 } from '@/lib/bridge';
 import { BRIDGE_CLIENT_SCRIPT } from '@/lib/bridge-client';
+import DebugOverlay, { debugLog, DebugOverlayRef } from '@/components/debug-overlay';
 
 // WebView 인스턴스를 전역에서 접근 가능하도록 (네비게이션 제어용)
 export let webViewRef: React.RefObject<WebView | null>;
@@ -46,16 +48,19 @@ interface WebViewError {
 
 export default function WebViewContainer() {
   const ref = useRef<WebView>(null);
+  const debugOverlayRef = useRef<DebugOverlayRef>(null);
   webViewRef = ref;
 
   // 초기 로딩 상태만 관리 (SPA 내부 네비게이션에서는 스피너 표시 안 함)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const [error, setError] = useState<WebViewError | null>(null);
+  const [loadProgress, setLoadProgress] = useState(0);
   const hasLoadedOnce = useRef(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadStartTime = useRef<number>(0);
 
-  const { webview, theme } = APP_CONFIG;
+  const { webview, theme, debug } = APP_CONFIG;
 
   /**
    * URL이 허용된 패턴과 일치하는지 확인
@@ -120,13 +125,19 @@ export default function WebViewContainer() {
 
   // 브릿지 초기화 (최초 1회)
   useEffect(() => {
+    debugLog('info', '브릿지 핸들러 등록 시작');
     registerBuiltInHandlers();
+    debugLog('success', '브릿지 핸들러 등록 완료');
   }, []);
 
   // WebView ref 설정
   useEffect(() => {
+    debugLog('info', 'WebView ref 설정');
     setBridgeWebView(ref.current);
-    return () => setBridgeWebView(null);
+    return () => {
+      debugLog('info', 'WebView ref 해제');
+      setBridgeWebView(null);
+    };
   }, []);
 
   // 로딩 타임아웃 클리어
@@ -140,8 +151,10 @@ export default function WebViewContainer() {
   // 로딩 타임아웃 설정
   const startLoadingTimeout = useCallback(() => {
     clearLoadingTimeout();
+    debugLog('info', `로딩 타임아웃 설정 (${LOADING_TIMEOUT}ms)`);
     loadingTimeoutRef.current = setTimeout(() => {
       if (!hasLoadedOnce.current) {
+        debugLog('error', '페이지 로딩 타임아웃!', `URL: ${webview.baseUrl}\n경과 시간: ${LOADING_TIMEOUT}ms`);
         console.warn('[WebView] Loading timeout');
         setError({
           code: -1,
@@ -182,16 +195,37 @@ export default function WebViewContainer() {
   // 네비게이션 상태 변경 핸들러
   const handleNavigationStateChange = useCallback((navState: WebViewNavigation) => {
     setCanGoBack(navState.canGoBack);
+    debugLog('event', '네비게이션 상태 변경', 
+      `URL: ${navState.url}\n` +
+      `canGoBack: ${navState.canGoBack}\n` +
+      `canGoForward: ${navState.canGoForward}\n` +
+      `loading: ${navState.loading}\n` +
+      `title: ${navState.title}`
+    );
   }, []);
 
   // 로드 시작 - 초기 로딩 시에만 스피너 표시
   const handleLoadStart = useCallback(() => {
+    loadStartTime.current = Date.now();
+    debugLog('event', '페이지 로드 시작', `URL: ${webview.baseUrl}\nhasLoadedOnce: ${hasLoadedOnce.current}`);
+    
     if (!hasLoadedOnce.current) {
       setIsInitialLoading(true);
       startLoadingTimeout(); // 타임아웃 시작
     }
     setError(null);
-  }, [startLoadingTimeout]);
+  }, [startLoadingTimeout, webview.baseUrl]);
+
+  // 로드 진행률 핸들러
+  const handleLoadProgress = useCallback((event: WebViewProgressEvent) => {
+    const progress = Math.round(event.nativeEvent.progress * 100);
+    setLoadProgress(progress);
+    
+    // 25%, 50%, 75%, 100% 마다만 로그 출력
+    if (progress === 25 || progress === 50 || progress === 75 || progress === 100) {
+      debugLog('info', `로드 진행률: ${progress}%`, `경과 시간: ${Date.now() - loadStartTime.current}ms`);
+    }
+  }, []);
 
   // 스플래시 숨기기 헬퍼
   const doHideSplash = useCallback(() => {
@@ -207,19 +241,25 @@ export default function WebViewContainer() {
   // 로드 완료
   const handleLoadEnd = useCallback(() => {
     clearLoadingTimeout(); // 타임아웃 클리어
+    const loadTime = Date.now() - loadStartTime.current;
+    debugLog('success', '페이지 로드 완료', `로드 시간: ${loadTime}ms\nhasLoadedOnce: ${hasLoadedOnce.current}`);
+    
     if (!hasLoadedOnce.current) {
       hasLoadedOnce.current = true;
       setIsInitialLoading(false);
       doHideSplash();
+      debugLog('info', '초기 로딩 완료, 스플래시 숨김 처리');
     }
   }, [doHideSplash, clearLoadingTimeout]);
 
   // 웹에서 보내는 메시지 처리
   const handleMessage = useCallback((event: WebViewMessageEvent) => {
     const messageData = event.nativeEvent.data;
+    debugLog('event', '웹 메시지 수신', messageData.substring(0, 200));
 
     // 브릿지 메시지 처리 시도
     if (handleBridgeMessage(messageData)) {
+      debugLog('info', '브릿지 메시지 처리됨');
       return; // 브릿지에서 처리됨
     }
 
@@ -228,6 +268,7 @@ export default function WebViewContainer() {
       const data = JSON.parse(messageData);
       
       if (data.type === 'HYDRATION_COMPLETE' || data.type === 'PAGE_READY') {
+        debugLog('success', `${data.type} 이벤트 수신`);
         if (!hasLoadedOnce.current) {
           hasLoadedOnce.current = true;
           setIsInitialLoading(false);
@@ -236,6 +277,7 @@ export default function WebViewContainer() {
       }
     } catch {
       // JSON이 아닌 메시지는 무시
+      debugLog('warn', '비-JSON 메시지 수신', messageData.substring(0, 100));
     }
   }, [doHideSplash]);
 
@@ -243,6 +285,11 @@ export default function WebViewContainer() {
   const handleError = useCallback((event: WebViewErrorEvent) => {
     clearLoadingTimeout();
     const { nativeEvent } = event;
+    debugLog('error', 'WebView 에러 발생', 
+      `코드: ${nativeEvent.code}\n` +
+      `설명: ${nativeEvent.description}\n` +
+      `URL: ${nativeEvent.url}`
+    );
     console.error('[WebView] Error:', nativeEvent.code, nativeEvent.description);
     setError({
       code: nativeEvent.code,
@@ -257,6 +304,7 @@ export default function WebViewContainer() {
   const handleHttpError = useCallback((event: WebViewHttpErrorEvent) => {
     const { nativeEvent } = event;
     const statusCode = nativeEvent.statusCode;
+    debugLog('error', `HTTP 에러: ${statusCode}`, `URL: ${nativeEvent.url}`);
     console.error('[WebView] HTTP Error:', statusCode, nativeEvent.url);
     
     // 4xx, 5xx 에러만 처리
@@ -272,8 +320,23 @@ export default function WebViewContainer() {
     }
   }, [doHideSplash, clearLoadingTimeout]);
 
+  // 렌더 프로세스 종료 핸들러
+  const handleRenderProcessGone = useCallback(() => {
+    debugLog('error', '렌더 프로세스 종료됨!', '자동 재로드 시도...');
+    console.warn('[WebView] Render process gone, reloading...');
+    ref.current?.reload();
+  }, []);
+
+  // 컨텐츠 프로세스 종료 핸들러 (iOS)
+  const handleContentProcessDidTerminate = useCallback(() => {
+    debugLog('error', '컨텐츠 프로세스 종료됨! (iOS)', '자동 재로드 시도...');
+    console.warn('[WebView] Content process terminated, reloading...');
+    ref.current?.reload();
+  }, []);
+
   // 재시도 핸들러
   const handleRetry = useCallback(() => {
+    debugLog('info', '사용자 재시도 요청');
     hasLoadedOnce.current = false; // 로드 상태 리셋
     setError(null);
     setIsInitialLoading(true);
@@ -332,19 +395,14 @@ export default function WebViewContainer() {
         onNavigationStateChange={handleNavigationStateChange}
         onLoadStart={handleLoadStart}
         onLoadEnd={handleLoadEnd}
+        onLoadProgress={handleLoadProgress}
         onError={handleError}
         onHttpError={handleHttpError}
         onMessage={handleMessage}
         onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
         // 렌더링 프로세스 종료 시 자동 재로드
-        onRenderProcessGone={() => {
-          console.warn('[WebView] Render process gone, reloading...');
-          ref.current?.reload();
-        }}
-        onContentProcessDidTerminate={() => {
-          console.warn('[WebView] Content process terminated, reloading...');
-          ref.current?.reload();
-        }}
+        onRenderProcessGone={handleRenderProcessGone}
+        onContentProcessDidTerminate={handleContentProcessDidTerminate}
         // 브릿지 클라이언트 + 페이지 로드 스크립트 주입
         injectedJavaScript={`
           ${BRIDGE_CLIENT_SCRIPT}
@@ -371,7 +429,17 @@ export default function WebViewContainer() {
             size="large" 
             color={theme.loadingIndicatorColor} 
           />
+          {debug.enabled && (
+            <Text style={styles.loadingProgressText}>
+              {loadProgress}%
+            </Text>
+          )}
         </View>
+      )}
+      
+      {/* 디버그 오버레이 */}
+      {debug.enabled && (
+        <DebugOverlay ref={debugOverlayRef} visible={true} />
       )}
     </View>
   );
@@ -400,6 +468,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingProgressText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'monospace',
   },
   errorContainer: {
     flex: 1,

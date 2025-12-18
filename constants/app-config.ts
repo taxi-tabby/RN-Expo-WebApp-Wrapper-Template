@@ -195,6 +195,26 @@ export const APP_CONFIG = {
     showLoadingIndicator: true,
   },
 
+  // 디버그 설정
+  debug: {
+    // 디버그 모드 활성화 (웹뷰 위에 로그 오버레이 표시)
+    enabled: true,
+    // 최대 로그 라인 수
+    maxLogLines: 50,
+    // 로그 오버레이 투명도 (0-1)
+    overlayOpacity: 0.85,
+    // 로그 폰트 크기
+    fontSize: 11,
+    // 로그 레벨 색상
+    colors: {
+      info: '#3498db',
+      warn: '#f39c12',
+      error: '#e74c3c',
+      success: '#27ae60',
+      event: '#9b59b6',
+    },
+  },
+
   // 기능 플래그 (추후 확장용)
   features: {
     // Firebase 푸시 알림
