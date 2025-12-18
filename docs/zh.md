@@ -236,6 +236,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `goForward` | - | - | WebView 前进 |
 | `reload` | - | - | WebView 重新加载 |
 | `hideSplash` | - | - | 隐藏启动画面 |
+| `getOrientation` | - | `{ success, orientation, lock }` | 获取屏幕方向状态 |
+| `setOrientation` | `{ mode }` | `{ success, mode }` | 设置屏幕方向 |
+| `unlockOrientation` | - | `{ success }` | 解锁屏幕方向（自动旋转） |
 
 
 ---

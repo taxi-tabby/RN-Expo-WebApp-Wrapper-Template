@@ -236,6 +236,9 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `goForward` | - | - | WebView go forward |
 | `reload` | - | - | WebView reload |
 | `hideSplash` | - | - | Hide splash screen |
+| `getOrientation` | - | `{ success, orientation, lock }` | Get screen orientation status |
+| `setOrientation` | `{ mode }` | `{ success, mode }` | Set screen orientation |
+| `unlockOrientation` | - | `{ success }` | Unlock orientation (enable auto-rotate) |
 
 
 ---

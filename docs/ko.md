@@ -236,6 +236,9 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 | `goForward` | - | - | WebView 앞으로가기 |
 | `reload` | - | - | WebView 새로고침 |
 | `hideSplash` | - | - | 스플래시 화면 숨기기 |
+| `getOrientation` | - | `{ success, orientation, lock }` | 화면 방향 상태 조회 |
+| `setOrientation` | `{ mode }` | `{ success, mode }` | 화면 방향 설정 |
+| `unlockOrientation` | - | `{ success }` | 화면 방향 잠금 해제 (자동 회전) |
 
 
 ---

@@ -236,6 +236,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `goForward` | - | - | WebView 進む |
 | `reload` | - | - | WebView 再読み込み |
 | `hideSplash` | - | - | スプラッシュ画面を非表示 |
+| `getOrientation` | - | `{ success, orientation, lock }` | 画面の向き状態を取得 |
+| `setOrientation` | `{ mode }` | `{ success, mode }` | 画面の向きを設定 |
+| `unlockOrientation` | - | `{ success }` | 画面の向きロックを解除（自動回転） |
 
 
 ---
