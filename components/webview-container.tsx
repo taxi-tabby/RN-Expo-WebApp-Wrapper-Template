@@ -62,19 +62,10 @@ export default function WebViewContainer() {
 
   const { webview, theme, debug } = APP_CONFIG;
 
-  // 컴포넌트 마운트 시 디버그 로그
+  // 컴포넌트 마운트 시 초기화
   useEffect(() => {
-    debugLog('info', 'WebViewContainer 마운트됨', 
-      `baseUrl: ${webview.baseUrl}\n` +
-      `isInitialLoading: ${isInitialLoading}\n` +
-      `Platform: ${Platform.OS}`
-    );
-    // 초기 로드 시작 시간 설정
     loadStartTime.current = Date.now();
-    
-    return () => {
-      debugLog('info', 'WebViewContainer 언마운트됨');
-    };
+    debugLog('info', '앱 시작', `URL: ${webview.baseUrl}`);
   }, []);
 
   /**
@@ -140,19 +131,13 @@ export default function WebViewContainer() {
 
   // 브릿지 초기화 (최초 1회)
   useEffect(() => {
-    debugLog('info', '브릿지 핸들러 등록 시작');
     registerBuiltInHandlers();
-    debugLog('success', '브릿지 핸들러 등록 완료');
   }, []);
 
   // WebView ref 설정
   useEffect(() => {
-    debugLog('info', 'WebView ref 설정');
     setBridgeWebView(ref.current);
-    return () => {
-      debugLog('info', 'WebView ref 해제');
-      setBridgeWebView(null);
-    };
+    return () => setBridgeWebView(null);
   }, []);
 
   // 로딩 타임아웃 클리어
@@ -166,10 +151,9 @@ export default function WebViewContainer() {
   // 로딩 타임아웃 설정
   const startLoadingTimeout = useCallback(() => {
     clearLoadingTimeout();
-    debugLog('info', `로딩 타임아웃 설정 (${LOADING_TIMEOUT}ms)`);
     loadingTimeoutRef.current = setTimeout(() => {
       if (!hasLoadedOnce.current) {
-        debugLog('error', '페이지 로딩 타임아웃!', `URL: ${webview.baseUrl}\n경과 시간: ${LOADING_TIMEOUT}ms`);
+        debugLog('error', '⚠️ 타임아웃!', `${LOADING_TIMEOUT}ms 초과`);
         console.warn('[WebView] Loading timeout');
         setError({
           code: -1,
@@ -210,30 +194,16 @@ export default function WebViewContainer() {
   // 네비게이션 상태 변경 핸들러
   const handleNavigationStateChange = useCallback((navState: WebViewNavigation) => {
     setCanGoBack(navState.canGoBack);
-    debugLog('event', '네비게이션 상태 변경', 
-      `URL: ${navState.url}\n` +
-      `canGoBack: ${navState.canGoBack}\n` +
-      `canGoForward: ${navState.canGoForward}\n` +
-      `loading: ${navState.loading}\n` +
-      `title: ${navState.title}`
-    );
   }, []);
 
   // 로드 시작 - 초기 로딩 시에만 스피너 표시
   const handleLoadStart = useCallback(() => {
-    const now = Date.now();
-    debugLog('event', '🚀 페이지 로드 시작', 
-      `URL: ${webview.baseUrl}\n` +
-      `hasLoadedOnce: ${hasLoadedOnce.current}\n` +
-      `이전 loadStartTime: ${loadStartTime.current}\n` +
-      `현재 시간: ${now}`
-    );
-    loadStartTime.current = now;
+    loadStartTime.current = Date.now();
+    debugLog('event', '🚀 로드 시작', webview.baseUrl);
     
     if (!hasLoadedOnce.current) {
-      debugLog('info', '초기 로딩 - 스피너 표시 및 타임아웃 시작');
       setIsInitialLoading(true);
-      startLoadingTimeout(); // 타임아웃 시작
+      startLoadingTimeout();
     }
     setError(null);
   }, [startLoadingTimeout, webview.baseUrl]);
@@ -242,11 +212,6 @@ export default function WebViewContainer() {
   const handleLoadProgress = useCallback((event: WebViewProgressEvent) => {
     const progress = Math.round(event.nativeEvent.progress * 100);
     setLoadProgress(progress);
-    
-    // 25%, 50%, 75%, 100% 마다만 로그 출력
-    if (progress === 25 || progress === 50 || progress === 75 || progress === 100) {
-      debugLog('info', `로드 진행률: ${progress}%`, `경과 시간: ${Date.now() - loadStartTime.current}ms`);
-    }
   }, []);
 
   // 스플래시 숨기기 헬퍼
@@ -262,22 +227,14 @@ export default function WebViewContainer() {
 
   // 로드 완료
   const handleLoadEnd = useCallback(() => {
-    clearLoadingTimeout(); // 타임아웃 클리어
-    const now = Date.now();
-    const loadTime = now - loadStartTime.current;
-    debugLog('success', '✅ 페이지 로드 완료', 
-      `로드 시간: ${loadTime}ms\n` +
-      `hasLoadedOnce: ${hasLoadedOnce.current}\n` +
-      `loadStartTime: ${loadStartTime.current}\n` +
-      `현재 시간: ${now}\n` +
-      `isInitialLoading 변경: true → false`
-    );
+    clearLoadingTimeout();
+    const loadTime = Date.now() - loadStartTime.current;
+    debugLog('success', '✅ 로드 완료', `${loadTime}ms`);
     
     if (!hasLoadedOnce.current) {
       hasLoadedOnce.current = true;
       setIsInitialLoading(false);
       doHideSplash();
-      debugLog('info', '초기 로딩 완료, 스플래시 숨김 처리');
     }
   }, [doHideSplash, clearLoadingTimeout]);
 
@@ -287,51 +244,36 @@ export default function WebViewContainer() {
 
     // 브릿지 메시지 처리 시도
     if (handleBridgeMessage(messageData)) {
-      debugLog('info', '브릿지 메시지 처리됨');
-      return; // 브릿지에서 처리됨
+      return;
     }
 
-    // 기존 로직 (hydration 감지)
     try {
       const data = JSON.parse(messageData);
       
-      // 디버그: DOM 상태 정보
+      // 디버그: DOM 상태 정보 (흔 화면 디버깅용)
       if (data.type === 'DEBUG_DOM_STATE') {
-        debugLog('info', '🔍 DOM 상태 확인',
-          `readyState: ${data.readyState}\n` +
-          `URL: ${data.url}\n` +
-          `Title: ${data.title}\n` +
-          `Body 길이: ${data.bodyLength}\n` +
-          `Body 배경: ${data.bodyBg}\n` +
-          `HTML 배경: ${data.htmlBg}\n` +
-          `Body 미리보기: ${data.bodyPreview?.substring(0, 100)}...`
+        debugLog('info', '🔍 DOM 상태',
+          `body: ${data.bodyLength}글자 | bg: ${data.bodyBg}`
         );
         return;
       }
       
       // 디버그: JS 에러
       if (data.type === 'JS_ERROR') {
-        debugLog('error', '⚠️ 웹페이지 JS 에러',
-          `메시지: ${data.message}\n` +
-          `위치: ${data.url}:${data.line}:${data.col}\n` +
-          `에러: ${data.error}`
-        );
+        debugLog('error', '⚠️ JS 에러', `${data.message}`);
         return;
       }
       
       if (data.type === 'HYDRATION_COMPLETE' || data.type === 'PAGE_READY') {
-        debugLog('success', `✅ ${data.type} 이벤트 수신`);
+        debugLog('success', `✅ ${data.type}`);
         if (!hasLoadedOnce.current) {
           hasLoadedOnce.current = true;
           setIsInitialLoading(false);
           doHideSplash();
         }
-      } else {
-        debugLog('event', '웹 메시지 수신', `type: ${data.type}\n${messageData.substring(0, 150)}`);
       }
     } catch {
       // JSON이 아닌 메시지는 무시
-      debugLog('warn', '비-JSON 메시지 수신', messageData.substring(0, 100));
     }
   }, [doHideSplash]);
 
@@ -339,11 +281,7 @@ export default function WebViewContainer() {
   const handleError = useCallback((event: WebViewErrorEvent) => {
     clearLoadingTimeout();
     const { nativeEvent } = event;
-    debugLog('error', 'WebView 에러 발생', 
-      `코드: ${nativeEvent.code}\n` +
-      `설명: ${nativeEvent.description}\n` +
-      `URL: ${nativeEvent.url}`
-    );
+    debugLog('error', '❌ WebView 에러', `${nativeEvent.code}: ${nativeEvent.description}`);
     console.error('[WebView] Error:', nativeEvent.code, nativeEvent.description);
     setError({
       code: nativeEvent.code,
@@ -358,7 +296,7 @@ export default function WebViewContainer() {
   const handleHttpError = useCallback((event: WebViewHttpErrorEvent) => {
     const { nativeEvent } = event;
     const statusCode = nativeEvent.statusCode;
-    debugLog('error', `HTTP 에러: ${statusCode}`, `URL: ${nativeEvent.url}`);
+    debugLog('error', `❌ HTTP ${statusCode}`, nativeEvent.url);
     console.error('[WebView] HTTP Error:', statusCode, nativeEvent.url);
     
     // 4xx, 5xx 에러만 처리
@@ -376,22 +314,21 @@ export default function WebViewContainer() {
 
   // 렌더 프로세스 종료 핸들러
   const handleRenderProcessGone = useCallback(() => {
-    debugLog('error', '렌더 프로세스 종료됨!', '자동 재로드 시도...');
+    debugLog('error', '❌ 렌더 프로세스 종료!', '재로드...');
     console.warn('[WebView] Render process gone, reloading...');
     ref.current?.reload();
   }, []);
 
   // 컨텐츠 프로세스 종료 핸들러 (iOS)
   const handleContentProcessDidTerminate = useCallback(() => {
-    debugLog('error', '컨텐츠 프로세스 종료됨! (iOS)', '자동 재로드 시도...');
+    debugLog('error', '❌ 컨텐츠 프로세스 종료!', '재로드...');
     console.warn('[WebView] Content process terminated, reloading...');
     ref.current?.reload();
   }, []);
 
   // 재시도 핸들러
   const handleRetry = useCallback(() => {
-    debugLog('info', '사용자 재시도 요청');
-    hasLoadedOnce.current = false; // 로드 상태 리셋
+    hasLoadedOnce.current = false;
     setError(null);
     setIsInitialLoading(true);
     ref.current?.reload();
@@ -457,11 +394,6 @@ export default function WebViewContainer() {
         // 렌더링 프로세스 종료 시 자동 재로드
         onRenderProcessGone={handleRenderProcessGone}
         onContentProcessDidTerminate={handleContentProcessDidTerminate}
-        // 레이아웃 변경 감지
-        onLayout={(event) => {
-          const { width, height } = event.nativeEvent.layout;
-          debugLog('info', '📐 WebView 레이아웃', `width: ${width}, height: ${height}`);
-        }}
         // 브릿지 클라이언트 + 페이지 로드 스크립트 주입
         injectedJavaScript={`
           ${BRIDGE_CLIENT_SCRIPT}
