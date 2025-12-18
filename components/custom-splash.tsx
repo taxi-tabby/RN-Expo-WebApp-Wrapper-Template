@@ -21,16 +21,16 @@ interface CustomSplashProps {
   onHidden?: () => void;
 }
 
-// 커스텀 스피너 컴포넌트 (ActivityIndicator 대체)
-function CustomSpinner({ color, size = 40 }: { color: string; size?: number }) {
+// 고급 미니멀 스피너 - 얇은 아크 회전
+function ArcSpinner({ color, size = 36 }: { color: string; size?: number }) {
   const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const spin = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
-        duration: 1000,
-        easing: Easing.linear,
+        duration: 1100,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
         useNativeDriver: true,
       })
     );
@@ -43,66 +43,159 @@ function CustomSpinner({ color, size = 40 }: { color: string; size?: number }) {
     outputRange: ['0deg', '360deg'],
   });
 
-  const dotSize = size * 0.2;
-  const radius = size * 0.35;
+  const borderWidth = Math.max(2, size * 0.06);
 
   return (
     <Animated.View
       style={[
-        styles.spinnerContainer,
-        { width: size, height: size, transform: [{ rotate }] },
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth,
+          borderColor: `${color}15`,
+          borderTopColor: color,
+          transform: [{ rotate }],
+        },
       ]}
-    >
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
-        const angle = (i * 45 * Math.PI) / 180;
-        const opacity = 0.3 + (i / 7) * 0.7;
-        return (
-          <View
-            key={i}
-            style={[
-              styles.spinnerDot,
-              {
-                width: dotSize,
-                height: dotSize,
-                borderRadius: dotSize / 2,
-                backgroundColor: color,
-                opacity,
-                position: 'absolute',
-                left: size / 2 - dotSize / 2 + Math.cos(angle) * radius,
-                top: size / 2 - dotSize / 2 + Math.sin(angle) * radius,
-              },
-            ]}
-          />
-        );
-      })}
-    </Animated.View>
+    />
+  );
+}
+
+// 펄스 도트 (3개의 점이 순차적으로 펄스)
+function PulseDots({ color, size = 8 }: { color: string; size?: number }) {
+  const anim1 = useRef(new Animated.Value(0.3)).current;
+  const anim2 = useRef(new Animated.Value(0.3)).current;
+  const anim3 = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const createPulse = (anim: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 400,
+            easing: Easing.ease,
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0.3,
+            duration: 400,
+            easing: Easing.ease,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const p1 = createPulse(anim1, 0);
+    const p2 = createPulse(anim2, 150);
+    const p3 = createPulse(anim3, 300);
+
+    p1.start();
+    p2.start();
+    p3.start();
+
+    return () => {
+      p1.stop();
+      p2.stop();
+      p3.stop();
+    };
+  }, [anim1, anim2, anim3]);
+
+  const dotStyle = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor: color,
+    marginHorizontal: size * 0.5,
+  };
+
+  return (
+    <View style={styles.dotsContainer}>
+      <Animated.View style={[dotStyle, { opacity: anim1, transform: [{ scale: anim1 }] }]} />
+      <Animated.View style={[dotStyle, { opacity: anim2, transform: [{ scale: anim2 }] }]} />
+      <Animated.View style={[dotStyle, { opacity: anim3, transform: [{ scale: anim3 }] }]} />
+    </View>
   );
 }
 
 export default function CustomSplash({ visible, onHidden }: CustomSplashProps) {
   const colorScheme = useColorScheme();
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.96)).current;
+  const logoScale = useRef(new Animated.Value(1)).current;
   const { splash } = APP_CONFIG;
 
   const backgroundColor = colorScheme === 'dark' 
     ? splash.darkBackgroundColor 
     : splash.backgroundColor;
 
-  const textColor = colorScheme === 'dark' ? '#ffffff' : '#000000';
-  const spinnerColor = colorScheme === 'dark' ? '#ffffff' : '#007AFF';
+  const textColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)';
+  const spinnerColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,122,255,0.9)';
 
+  // 등장 애니메이션
+  useEffect(() => {
+    if (visible && splash.enabled) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // 로고 미세한 펄스 (있을 경우)
+      if (splash.logoImage) {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(logoScale, {
+              toValue: 1.02,
+              duration: 2000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(logoScale, {
+              toValue: 1,
+              duration: 2000,
+              easing: Easing.inOut(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }
+    }
+  }, [visible, splash.enabled, splash.logoImage, fadeAnim, scaleAnim, logoScale]);
+
+  // 퇴장 애니메이션
   useEffect(() => {
     if (!visible) {
-      // 페이드 아웃 애니메이션
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: splash.fadeOutDuration,
-        useNativeDriver: true,
-      }).start(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: splash.fadeOutDuration,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1.02,
+          duration: splash.fadeOutDuration,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
         onHidden?.();
       });
     }
-  }, [visible, fadeAnim, onHidden, splash.fadeOutDuration]);
+  }, [visible, fadeAnim, scaleAnim, onHidden, splash.fadeOutDuration]);
 
   if (!splash.enabled) {
     return null;
@@ -112,27 +205,38 @@ export default function CustomSplash({ visible, onHidden }: CustomSplashProps) {
     <Animated.View
       style={[
         styles.container,
-        { backgroundColor, opacity: fadeAnim },
+        { 
+          backgroundColor, 
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
-      {splash.logoImage && (
-        <Image
-          source={{ uri: splash.logoImage }}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      )}
-      
-      {splash.loadingText && (
-        <Text style={[styles.loadingText, { color: textColor }]}>
-          {splash.loadingText}
-        </Text>
-      )}
-      
-      {splash.showLoadingIndicator && (
-        <CustomSpinner color={spinnerColor} size={40} />
-      )}
+      <View style={styles.content}>
+        {splash.logoImage && (
+          <Animated.View style={{ transform: [{ scale: logoScale }] }}>
+            <Image
+              source={{ uri: splash.logoImage }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Animated.View>
+        )}
+        
+        {splash.loadingText && (
+          <Text style={[styles.loadingText, { color: textColor }]}>
+            {splash.loadingText}
+          </Text>
+        )}
+        
+        {splash.showLoadingIndicator && (
+          <View style={styles.spinnerWrapper}>
+            {/* 심플한 아크 스피너 사용 (또는 PulseDots로 교체 가능) */}
+            <ArcSpinner color={spinnerColor} size={32} />
+          </View>
+        )}
+      </View>
     </Animated.View>
   );
 }
@@ -144,17 +248,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 9999,
   },
+  content: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logo: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+    width: 120,
+    height: 120,
+    marginBottom: 24,
   },
   loadingText: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 14,
+    fontWeight: '400',
+    letterSpacing: 0.5,
+    marginBottom: 24,
   },
-  spinnerContainer: {
-    marginTop: 10,
+  spinnerWrapper: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  spinnerDot: {},
-});
+  dotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
