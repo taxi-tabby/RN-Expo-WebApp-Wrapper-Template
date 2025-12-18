@@ -51,8 +51,77 @@ allowedUrlPatterns: [
 ```
 
 
+### TypeScript 타입 정의 (웹 측)
+
+타입스크립트의 경우 타입이 없어 에러가 날 수 있음. 아래 방법 중 하나를 선택하여 해결.
 
 
+#### 방법 A: 타입 패키지 설치 (권장)
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+`tsconfig.json`의 `compilerOptions.types`에 패키지명을 추가합니다.
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+#### 방법 B: import 사용
+
+앱의 진입점 파일(예: `main.ts`, `app.tsx`)에서 한 번만 import하면 됩니다.
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+#### 방법 C: 수동 타입 선언
+
+프로젝트에 직접 타입 정의 파일을 생성합니다.
+
+```typescript
+// globals.d.ts
+
+interface AppBridge {
+  /** 앱으로 메시지 전송 (응답 없음) */
+  send(action: string, payload?: Record<string, unknown>): void;
+  
+  /** 앱으로 메시지 전송 후 응답 대기 */
+  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
+  
+  /** 앱에서 온 메시지 리스너 등록 ('*'로 모든 메시지 수신 가능) */
+  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 한 번만 메시지 수신 후 자동 해제 */
+  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 특정 메시지를 타임아웃까지 대기 (Promise 반환) (once의 promise 버전) */
+  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
+  
+  /** 등록된 리스너 해제 */
+  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 앱 환경인지 체크 */
+  isApp(): boolean;
+  
+  /** 버전 */
+  version: string;
+}
+
+interface Window {
+  AppBridge?: AppBridge;
+}
+```
+
+
+---
 
 
 ### 통신 방향별 함수 관계
@@ -103,75 +172,6 @@ if (window.AppBridge?.isApp()) {
 | `waitFor(action, timeout)` | 특정 메시지를 타임아웃까지 대기 (Promise 반환) |
 | `off(action, callback)` | 등록된 리스너 해제 |
 | `isApp()` | 앱 환경인지 체크 (ReactNativeWebView 존재 여부) |
-
-#### TypeScript 타입 정의
-
-타입스크립트의 경우 타입이 없어 에러가 날 수 있음. 아래 방법 중 하나를 선택하여 해결.
-
-
-##### 방법 A: 타입 패키지 설치 (권장)
-
-```bash
-npm install rn-webwrapper-bridge-types --save-dev
-```
-
-`tsconfig.json`의 `compilerOptions.types`에 패키지명을 추가합니다.
-
-```json
-{
-  "compilerOptions": {
-    "types": ["rn-webwrapper-bridge-types"]
-  }
-}
-```
-
-
-##### 방법 B: import 사용
-
-앱의 진입점 파일(예: `main.ts`, `app.tsx`)에서 한 번만 import하면 됩니다.
-
-```typescript
-import 'rn-webwrapper-bridge-types';
-```
-
-
-##### 방법 C: 수동 타입 선언
-
-프로젝트에 직접 타입 정의 파일을 생성합니다.
-
-```typescript
-// globals.d.ts
-
-interface AppBridge {
-  /** 앱으로 메시지 전송 (응답 없음) */
-  send(action: string, payload?: Record<string, unknown>): void;
-  
-  /** 앱으로 메시지 전송 후 응답 대기 */
-  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
-  
-  /** 앱에서 온 메시지 리스너 등록 ('*'로 모든 메시지 수신 가능) */
-  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 한 번만 메시지 수신 후 자동 해제 */
-  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 특정 메시지를 타임아웃까지 대기 (Promise 반환) (once의 promise 버전) */
-  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
-  
-  /** 등록된 리스너 해제 */
-  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 앱 환경인지 체크 */
-  isApp(): boolean;
-  
-  /** 버전 */
-  version: string;
-}
-
-interface Window {
-  AppBridge?: AppBridge;
-}
-```
 
 
 ---

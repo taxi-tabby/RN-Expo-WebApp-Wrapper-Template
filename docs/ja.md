@@ -50,6 +50,80 @@ Web → App: app://アクション名
 App → Web: native://アクション名
 ```
 
+
+### TypeScript 型定義（Web 側）
+
+TypeScript では型がないためエラーが発生する可能性があります。以下の方法のいずれかを選択して解決します。
+
+
+#### 方法 A: 型パッケージのインストール（推奨）
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+`tsconfig.json`の`compilerOptions.types`にパッケージ名を追加します。
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+#### 方法 B: import を使用
+
+アプリのエントリーポイントファイル（例: `main.ts`、`app.tsx`）で一度だけインポートします。
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+#### 方法 C: 手動型宣言
+
+プロジェクトに直接型定義ファイルを作成します。
+
+```typescript
+// globals.d.ts
+
+interface AppBridge {
+  /** アプリにメッセージを送信（レスポンスなし） */
+  send(action: string, payload?: Record<string, unknown>): void;
+  
+  /** アプリにメッセージを送信しレスポンスを待機 */
+  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
+  
+  /** アプリからのメッセージリスナーを登録（'*' で全メッセージ受信可能） */
+  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 一度だけメッセージを受信し自動解除 */
+  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 特定のメッセージをタイムアウトまで待機（once の Promise 版） */
+  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
+  
+  /** リスナーを解除 */
+  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
+  
+  /** アプリ環境かチェック */
+  isApp(): boolean;
+  
+  /** バージョン */
+  version: string;
+}
+
+interface Window {
+  AppBridge?: AppBridge;
+}
+```
+
+
+---
+
+
 ### 通信方向別の関数関係
 
 | 方向 | 送信側 | 受信側 | 説明 |
@@ -98,75 +172,6 @@ if (window.AppBridge?.isApp()) {
 | `waitFor(action, timeout)` | 特定のメッセージをタイムアウトまで待機（Promise を返す） |
 | `off(action, callback)` | リスナーを解除 |
 | `isApp()` | アプリ環境かチェック（ReactNativeWebView の存在確認） |
-
-#### TypeScript 型定義
-
-TypeScript では型がないためエラーが発生する可能性があります。以下の方法のいずれかを選択して解決します。
-
-
-##### 方法 A: 型パッケージのインストール（推奨）
-
-```bash
-npm install rn-webwrapper-bridge-types --save-dev
-```
-
-`tsconfig.json`の`compilerOptions.types`にパッケージ名を追加します。
-
-```json
-{
-  "compilerOptions": {
-    "types": ["rn-webwrapper-bridge-types"]
-  }
-}
-```
-
-
-##### 方法 B: import を使用
-
-アプリのエントリーポイントファイル（例: `main.ts`、`app.tsx`）で一度だけインポートします。
-
-```typescript
-import 'rn-webwrapper-bridge-types';
-```
-
-
-##### 方法 C: 手動型宣言
-
-プロジェクトに直接型定義ファイルを作成します。
-
-```typescript
-// globals.d.ts
-
-interface AppBridge {
-  /** アプリにメッセージを送信（レスポンスなし） */
-  send(action: string, payload?: Record<string, unknown>): void;
-  
-  /** アプリにメッセージを送信しレスポンスを待機 */
-  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
-  
-  /** アプリからのメッセージリスナーを登録（'*' で全メッセージ受信可能） */
-  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 一度だけメッセージを受信し自動解除 */
-  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 特定のメッセージをタイムアウトまで待機（once の Promise 版） */
-  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
-  
-  /** リスナーを解除 */
-  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
-  
-  /** アプリ環境かチェック */
-  isApp(): boolean;
-  
-  /** バージョン */
-  version: string;
-}
-
-interface Window {
-  AppBridge?: AppBridge;
-}
-```
 
 
 ---

@@ -50,6 +50,80 @@ Web → App: app://actionName
 App → Web: native://actionName
 ```
 
+
+### TypeScript Type Definition (Web Side)
+
+TypeScript may throw errors due to missing types. Choose one of the following methods to resolve.
+
+
+#### Method A: Install Type Package (Recommended)
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+Add the package name to `compilerOptions.types` in `tsconfig.json`.
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+#### Method B: Using import
+
+Import once in your app's entry point file (e.g., `main.ts`, `app.tsx`).
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+#### Method C: Manual Type Declaration
+
+Create a type definition file directly in your project.
+
+```typescript
+// globals.d.ts
+
+interface AppBridge {
+  /** Send message to app (no response) */
+  send(action: string, payload?: Record<string, unknown>): void;
+  
+  /** Send message to app and wait for response */
+  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
+  
+  /** Register listener for messages from app ('*' to receive all messages) */
+  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** Receive message only once, then auto-unregister */
+  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** Wait for specific message until timeout (Promise version of once) */
+  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
+  
+  /** Unregister listener */
+  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
+  
+  /** Check if running in app environment */
+  isApp(): boolean;
+  
+  /** Version */
+  version: string;
+}
+
+interface Window {
+  AppBridge?: AppBridge;
+}
+```
+
+
+---
+
+
 ### Function Relationships by Communication Direction
 
 | Direction | Sender | Receiver | Description |
@@ -98,75 +172,6 @@ if (window.AppBridge?.isApp()) {
 | `waitFor(action, timeout)` | Wait for specific message until timeout (returns Promise) |
 | `off(action, callback)` | Unregister listener |
 | `isApp()` | Check if running in app environment (ReactNativeWebView existence) |
-
-#### TypeScript Type Definition
-
-TypeScript may throw errors due to missing types. Choose one of the following methods to resolve.
-
-
-##### Method A: Install Type Package (Recommended)
-
-```bash
-npm install rn-webwrapper-bridge-types --save-dev
-```
-
-Add the package name to `compilerOptions.types` in `tsconfig.json`.
-
-```json
-{
-  "compilerOptions": {
-    "types": ["rn-webwrapper-bridge-types"]
-  }
-}
-```
-
-
-##### Method B: Using import
-
-Import once in your app's entry point file (e.g., `main.ts`, `app.tsx`).
-
-```typescript
-import 'rn-webwrapper-bridge-types';
-```
-
-
-##### Method C: Manual Type Declaration
-
-Create a type definition file directly in your project.
-
-```typescript
-// globals.d.ts
-
-interface AppBridge {
-  /** Send message to app (no response) */
-  send(action: string, payload?: Record<string, unknown>): void;
-  
-  /** Send message to app and wait for response */
-  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
-  
-  /** Register listener for messages from app ('*' to receive all messages) */
-  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** Receive message only once, then auto-unregister */
-  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** Wait for specific message until timeout (Promise version of once) */
-  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
-  
-  /** Unregister listener */
-  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
-  
-  /** Check if running in app environment */
-  isApp(): boolean;
-  
-  /** Version */
-  version: string;
-}
-
-interface Window {
-  AppBridge?: AppBridge;
-}
-```
 
 
 ---

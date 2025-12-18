@@ -50,6 +50,80 @@ Web → App: app://动作名
 App → Web: native://动作名
 ```
 
+
+### TypeScript 类型定义（Web 端）
+
+TypeScript 可能因缺少类型而报错。选择以下方法之一来解决。
+
+
+#### 方法 A: 安装类型包（推荐）
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+在 `tsconfig.json` 的 `compilerOptions.types` 中添加包名。
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+#### 方法 B: 使用 import
+
+在应用的入口文件（例如: `main.ts`、`app.tsx`）中导入一次即可。
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+#### 方法 C: 手动类型声明
+
+在项目中直接创建类型定义文件。
+
+```typescript
+// globals.d.ts
+
+interface AppBridge {
+  /** 向应用发送消息（无响应） */
+  send(action: string, payload?: Record<string, unknown>): void;
+  
+  /** 向应用发送消息并等待响应 */
+  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
+  
+  /** 注册来自应用的消息监听器（'*' 接收所有消息） */
+  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 仅接收一次消息，然后自动注销 */
+  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 等待特定消息直到超时（once 的 Promise 版本） */
+  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
+  
+  /** 注销监听器 */
+  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
+  
+  /** 检查是否在应用环境中运行 */
+  isApp(): boolean;
+  
+  /** 版本 */
+  version: string;
+}
+
+interface Window {
+  AppBridge?: AppBridge;
+}
+```
+
+
+---
+
+
 ### 按通信方向的函数关系
 
 | 方向 | 发送方 | 接收方 | 说明 |
@@ -98,75 +172,6 @@ if (window.AppBridge?.isApp()) {
 | `waitFor(action, timeout)` | 等待特定消息直到超时（返回 Promise） |
 | `off(action, callback)` | 注销监听器 |
 | `isApp()` | 检查是否在应用环境中运行（ReactNativeWebView 存在性） |
-
-#### TypeScript 类型定义
-
-TypeScript 可能因缺少类型而报错。选择以下方法之一来解决。
-
-
-##### 方法 A: 安装类型包（推荐）
-
-```bash
-npm install rn-webwrapper-bridge-types --save-dev
-```
-
-在 `tsconfig.json` 的 `compilerOptions.types` 中添加包名。
-
-```json
-{
-  "compilerOptions": {
-    "types": ["rn-webwrapper-bridge-types"]
-  }
-}
-```
-
-
-##### 方法 B: 使用 import
-
-在应用的入口文件（例如: `main.ts`、`app.tsx`）中导入一次即可。
-
-```typescript
-import 'rn-webwrapper-bridge-types';
-```
-
-
-##### 方法 C: 手动类型声明
-
-在项目中直接创建类型定义文件。
-
-```typescript
-// globals.d.ts
-
-interface AppBridge {
-  /** 向应用发送消息（无响应） */
-  send(action: string, payload?: Record<string, unknown>): void;
-  
-  /** 向应用发送消息并等待响应 */
-  call<T = unknown>(action: string, payload?: Record<string, unknown>, timeout?: number): Promise<T>;
-  
-  /** 注册来自应用的消息监听器（'*' 接收所有消息） */
-  on(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 仅接收一次消息，然后自动注销 */
-  once(action: string, callback: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 等待特定消息直到超时（once 的 Promise 版本） */
-  waitFor<T = unknown>(action: string, timeout?: number): Promise<{ payload: T; message: unknown }>;
-  
-  /** 注销监听器 */
-  off(action: string, callback?: (payload: unknown, message?: unknown) => void): void;
-  
-  /** 检查是否在应用环境中运行 */
-  isApp(): boolean;
-  
-  /** 版本 */
-  version: string;
-}
-
-interface Window {
-  AppBridge?: AppBridge;
-}
-```
 
 
 ---
