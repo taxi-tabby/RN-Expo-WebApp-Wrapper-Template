@@ -352,19 +352,108 @@ export default function WebViewContainer() {
   // 재시도 핸들러
   const handleRetry = useCallback(() => {
     hasLoadedOnce.current = false;
+    emptyBodyRetryCount.current = 0;
     setError(null);
     setIsInitialLoading(true);
     ref.current?.reload();
   }, []);
 
+  // 에러 타입에 따른 메시지 생성
+  const getErrorInfo = useCallback((err: WebViewError) => {
+    const code = err.code;
+    const desc = err.description?.toLowerCase() || '';
+    
+    // DNS 해석 실패
+    if (code === -2 || desc.includes('err_name_not_resolved')) {
+      return {
+        icon: '🌐',
+        title: '서버를 찾을 수 없습니다',
+        message: '웹사이트 주소가 올바른지 확인해주세요.\n인터넷 연결 상태도 확인해보세요.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    // 연결 실패
+    if (code === -6 || desc.includes('err_connection_refused')) {
+      return {
+        icon: '🔌',
+        title: '서버에 연결할 수 없습니다',
+        message: '서버가 응답하지 않습니다.\n잠시 후 다시 시도해주세요.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    // 타임아웃
+    if (code === -1 || desc.includes('timeout') || desc.includes('timed out')) {
+      return {
+        icon: '⏱️',
+        title: '연결 시간 초과',
+        message: '서버 응답이 너무 느립니다.\n네트워크 상태를 확인해주세요.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    // 인터넷 없음
+    if (desc.includes('err_internet_disconnected') || desc.includes('no internet')) {
+      return {
+        icon: '📡',
+        title: '인터넷 연결 없음',
+        message: 'Wi-Fi 또는 모바일 데이터 연결을\n확인해주세요.',
+        detail: '',
+      };
+    }
+    
+    // SSL 에러
+    if (desc.includes('ssl') || desc.includes('certificate')) {
+      return {
+        icon: '🔒',
+        title: '보안 연결 실패',
+        message: '안전한 연결을 설정할 수 없습니다.\n사이트 인증서에 문제가 있을 수 있습니다.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    // HTTP 에러
+    if (code >= 400 && code < 500) {
+      return {
+        icon: '🚫',
+        title: `페이지를 찾을 수 없습니다 (${code})`,
+        message: '요청한 페이지가 존재하지 않거나\n접근 권한이 없습니다.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    if (code >= 500) {
+      return {
+        icon: '⚠️',
+        title: `서버 오류 (${code})`,
+        message: '서버에 문제가 발생했습니다.\n잠시 후 다시 시도해주세요.',
+        detail: `URL: ${err.url}`,
+      };
+    }
+    
+    // 기타 에러
+    return {
+      icon: '❌',
+      title: '페이지를 불러올 수 없습니다',
+      message: err.description || '알 수 없는 오류가 발생했습니다.',
+      detail: `코드: ${code}`,
+    };
+  }, []);
+
   // 에러 화면 렌더링
   if (error) {
+    const errorInfo = getErrorInfo(error);
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>페이지를 불러올 수 없습니다</Text>
-        <Text style={styles.errorDescription}>{error.description}</Text>
-        <Pressable onPress={handleRetry}>
-          <Text style={styles.retryButton}>다시 시도</Text>
+        <Text style={styles.errorIcon}>{errorInfo.icon}</Text>
+        <Text style={styles.errorTitle}>{errorInfo.title}</Text>
+        <Text style={styles.errorMessage}>{errorInfo.message}</Text>
+        {debug.enabled && errorInfo.detail && (
+          <Text style={styles.errorDetail}>{errorInfo.detail}</Text>
+        )}
+        <Pressable style={styles.retryButtonContainer} onPress={handleRetry}>
+          <Text style={styles.retryButtonText}>다시 시도</Text>
         </Pressable>
       </View>
     );
@@ -562,24 +651,45 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    padding: 32,
+    backgroundColor: '#fafafa',
   },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  errorDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+  errorIcon: {
+    fontSize: 64,
     marginBottom: 20,
   },
-  retryButton: {
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+  errorMessage: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  errorDetail: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  retryButtonContainer: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  retryButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#fff',
     fontWeight: '600',
   },
 });
