@@ -56,9 +56,13 @@ export default function WebViewContainer() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [error, setError] = useState<WebViewError | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [webViewKey, setWebViewKey] = useState(1); // WebView 재생성용 키
+  const [cacheMode, setCacheMode] = useState(true); // 캐시 사용 여부
   const hasLoadedOnce = useRef(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadStartTime = useRef<number>(0);
+  const emptyBodyRetryCount = useRef(0); // 빈 body 재시도 카운터
+  const MAX_EMPTY_BODY_RETRIES = 2; // 일반 재시도 횟수
 
   const { webview, theme, debug } = APP_CONFIG;
 
@@ -250,11 +254,36 @@ export default function WebViewContainer() {
     try {
       const data = JSON.parse(messageData);
       
-      // 디버그: DOM 상태 정보 (흔 화면 디버깅용)
+      // 디버그: DOM 상태 정보 (흰 화면 디버깅용)
       if (data.type === 'DEBUG_DOM_STATE') {
         debugLog('info', '🔍 DOM 상태',
           `body: ${data.bodyLength}글자 | bg: ${data.bodyBg}`
         );
+        
+        // body가 비어있으면 자동 재로드 시도
+        if (data.bodyLength === 0) {
+          emptyBodyRetryCount.current += 1;
+          
+          if (emptyBodyRetryCount.current <= MAX_EMPTY_BODY_RETRIES) {
+            // 1~2차: 일반 재로드
+            debugLog('warn', `⚠️ 빈 화면! 재로드 ${emptyBodyRetryCount.current}/${MAX_EMPTY_BODY_RETRIES}`);
+            setTimeout(() => ref.current?.reload(), 500);
+          } else if (emptyBodyRetryCount.current === MAX_EMPTY_BODY_RETRIES + 1) {
+            // 3차: 캐시 삭제 후 WebView 재생성
+            debugLog('warn', '🗑️ 캐시 삭제 후 재시작...');
+            emptyBodyRetryCount.current = 0;
+            hasLoadedOnce.current = false;
+            setIsInitialLoading(true);
+            setCacheMode(false); // 캐시 비활성화
+            setWebViewKey(prev => prev + 1); // WebView 완전 재생성
+            
+            // 다음 로드 후 캐시 다시 활성화
+            setTimeout(() => setCacheMode(true), 3000);
+          }
+        } else if (data.bodyLength > 0) {
+          // 정상 로드되면 카운터 리셋
+          emptyBodyRetryCount.current = 0;
+        }
         return;
       }
       
@@ -350,6 +379,7 @@ export default function WebViewContainer() {
   return (
     <View style={styles.container}>
       <WebView
+        key={webViewKey}
         ref={ref}
         source={{ uri: webview.baseUrl }}
         style={styles.webview}
@@ -361,13 +391,13 @@ export default function WebViewContainer() {
         thirdPartyCookiesEnabled={webview.options.thirdPartyCookiesEnabled}
         mediaPlaybackRequiresUserAction={webview.options.mediaPlaybackRequiresUserAction}
         mixedContentMode={webview.options.mixedContentMode}
-        cacheEnabled={webview.options.cacheEnabled}
+        cacheEnabled={cacheMode && webview.options.cacheEnabled}
         allowsInlineMediaPlayback={webview.options.allowsInlineMediaPlayback}
         allowsBackForwardNavigationGestures={webview.options.allowsBackForwardNavigationGestures}
         allowFileAccess={webview.options.allowFileAccess}
         // 세션 유지
         sharedCookiesEnabled={true}
-        incognito={false}
+        incognito={!cacheMode}
         // 성능 최적화 옵션
         androidLayerType={webview.performance.androidLayerType}
         overScrollMode={webview.performance.overScrollMode}
@@ -400,20 +430,13 @@ export default function WebViewContainer() {
           (function() {
             // 디버그: DOM 상태 확인
             function checkDOMState() {
-              var bodyContent = document.body ? document.body.innerHTML.substring(0, 200) : 'NO BODY';
-              var docState = document.readyState;
+              var bodyLen = document.body ? document.body.innerHTML.length : 0;
               var bodyBg = document.body ? window.getComputedStyle(document.body).backgroundColor : 'N/A';
-              var htmlBg = document.documentElement ? window.getComputedStyle(document.documentElement).backgroundColor : 'N/A';
               
               window.ReactNativeWebView.postMessage(JSON.stringify({ 
                 type: 'DEBUG_DOM_STATE',
-                readyState: docState,
-                bodyBg: bodyBg,
-                htmlBg: htmlBg,
-                bodyLength: document.body ? document.body.innerHTML.length : 0,
-                bodyPreview: bodyContent,
-                url: window.location.href,
-                title: document.title
+                bodyLength: bodyLen,
+                bodyBg: bodyBg
               }));
             }
             
@@ -432,16 +455,14 @@ export default function WebViewContainer() {
             window.onerror = function(msg, url, line, col, error) {
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'JS_ERROR',
-                message: msg,
-                url: url,
-                line: line,
-                col: col,
-                error: error ? error.toString() : null
+                message: msg
               }));
             };
             
-            // 3초 후에도 DOM 상태 재확인 (지연 렌더링 감지용)
-            setTimeout(checkDOMState, 3000);
+            // 빈 화면 감지를 위해 여러 번 체크 (1초, 2초, 5초)
+            setTimeout(checkDOMState, 1000);
+            setTimeout(checkDOMState, 2000);
+            setTimeout(checkDOMState, 5000);
           })();
           true;
         `}
