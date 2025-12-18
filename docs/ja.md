@@ -101,7 +101,38 @@ if (window.AppBridge?.isApp()) {
 
 #### TypeScript 型定義
 
-TypeScript では型がないためエラーが発生する可能性があります。以下のように定義ファイルを作成して解決します。
+TypeScript では型がないためエラーが発生する可能性があります。以下の方法のいずれかを選択して解決します。
+
+
+##### 方法 A: 型パッケージのインストール（推奨）
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+`tsconfig.json`の`compilerOptions.types`にパッケージ名を追加します。
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+##### 方法 B: import を使用
+
+アプリのエントリーポイントファイル（例: `main.ts`、`app.tsx`）で一度だけインポートします。
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+##### 方法 C: 手動型宣言
+
+プロジェクトに直接型定義ファイルを作成します。
 
 ```typescript
 // globals.d.ts

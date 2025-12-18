@@ -101,7 +101,38 @@ if (window.AppBridge?.isApp()) {
 
 #### TypeScript 类型定义
 
-TypeScript 可能因缺少类型而报错。创建以下定义文件来解决：
+TypeScript 可能因缺少类型而报错。选择以下方法之一来解决。
+
+
+##### 方法 A: 安装类型包（推荐）
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+在 `tsconfig.json` 的 `compilerOptions.types` 中添加包名。
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+##### 方法 B: 使用 import
+
+在应用的入口文件（例如: `main.ts`、`app.tsx`）中导入一次即可。
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+##### 方法 C: 手动类型声明
+
+在项目中直接创建类型定义文件。
 
 ```typescript
 // globals.d.ts

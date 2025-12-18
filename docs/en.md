@@ -101,7 +101,38 @@ if (window.AppBridge?.isApp()) {
 
 #### TypeScript Type Definition
 
-TypeScript may throw errors due to missing types. Create a definition file as follows:
+TypeScript may throw errors due to missing types. Choose one of the following methods to resolve.
+
+
+##### Method A: Install Type Package (Recommended)
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+Add the package name to `compilerOptions.types` in `tsconfig.json`.
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+##### Method B: Using import
+
+Import once in your app's entry point file (e.g., `main.ts`, `app.tsx`).
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+##### Method C: Manual Type Declaration
+
+Create a type definition file directly in your project.
 
 ```typescript
 // globals.d.ts

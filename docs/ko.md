@@ -50,6 +50,11 @@ allowedUrlPatterns: [
 앱 → 웹: native://액션명
 ```
 
+
+
+
+
+
 ### 통신 방향별 함수 관계
 
 | 방향 | 송신 측 | 수신 측 | 설명 |
@@ -101,7 +106,38 @@ if (window.AppBridge?.isApp()) {
 
 #### TypeScript 타입 정의
 
-타입스크립트의 경우 타입이 없어 에러가 날 수 있음. 아래와 같이 정의 파일을 만들어 해결.
+타입스크립트의 경우 타입이 없어 에러가 날 수 있음. 아래 방법 중 하나를 선택하여 해결.
+
+
+##### 방법 A: 타입 패키지 설치 (권장)
+
+```bash
+npm install rn-webwrapper-bridge-types --save-dev
+```
+
+`tsconfig.json`의 `compilerOptions.types`에 패키지명을 추가합니다.
+
+```json
+{
+  "compilerOptions": {
+    "types": ["rn-webwrapper-bridge-types"]
+  }
+}
+```
+
+
+##### 방법 B: import 사용
+
+앱의 진입점 파일(예: `main.ts`, `app.tsx`)에서 한 번만 import하면 됩니다.
+
+```typescript
+import 'rn-webwrapper-bridge-types';
+```
+
+
+##### 방법 C: 수동 타입 선언
+
+프로젝트에 직접 타입 정의 파일을 생성합니다.
 
 ```typescript
 // globals.d.ts
