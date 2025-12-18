@@ -128,8 +128,8 @@ export default function CustomSplash({ visible, onHidden }: CustomSplashProps) {
   const logoScale = useRef(new Animated.Value(1)).current;
   const { splash } = APP_CONFIG;
 
-  const backgroundColor = colorScheme === 'dark' 
-    ? splash.darkBackgroundColor 
+  const backgroundColor = colorScheme === 'dark'
+    ? splash.darkBackgroundColor
     : splash.backgroundColor;
 
   const textColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)';
@@ -205,8 +205,8 @@ export default function CustomSplash({ visible, onHidden }: CustomSplashProps) {
     <Animated.View
       style={[
         styles.container,
-        { 
-          backgroundColor, 
+        {
+          backgroundColor,
           opacity: fadeAnim,
           transform: [{ scale: scaleAnim }],
         },
@@ -223,13 +223,13 @@ export default function CustomSplash({ visible, onHidden }: CustomSplashProps) {
             />
           </Animated.View>
         )}
-        
+
         {splash.loadingText && (
           <Text style={[styles.loadingText, { color: textColor }]}>
             {splash.loadingText}
           </Text>
         )}
-        
+
         {splash.showLoadingIndicator && (
           <View style={styles.spinnerWrapper}>
             {/* 심플한 아크 스피너 사용 (또는 PulseDots로 교체 가능) */}
@@ -273,3 +273,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+});
