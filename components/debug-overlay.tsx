@@ -6,12 +6,11 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
     Dimensions,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 import { APP_CONFIG } from '@/constants/app-config';
