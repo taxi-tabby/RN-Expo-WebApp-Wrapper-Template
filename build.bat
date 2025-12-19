@@ -133,6 +133,10 @@ echo ============================================
 echo         Gradle 캐시 정리
 echo ============================================
 echo.
+echo CMake 캐시 삭제 중...
+if exist "android\app\.cxx" rmdir /s /q "android\app\.cxx"
+if exist "android\app\build" rmdir /s /q "android\app\build"
+echo.
 echo Gradle 데몬 종료 중...
 cd android
 call gradlew --stop
