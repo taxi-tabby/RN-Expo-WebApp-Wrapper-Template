@@ -5,6 +5,7 @@
 
 import { registerClipboardHandlers } from './clipboard';
 import { registerDeviceHandlers } from './device';
+import { registerKeepAwakeHandlers } from './keep-awake';
 import { registerNavigationBarHandlers } from './navigation-bar';
 import { registerOrientationHandlers } from './orientation';
 import { registerScreenPinningHandlers } from './screen-pinning';
@@ -26,6 +27,7 @@ export const registerBuiltInHandlers = () => {
   registerStatusBarHandlers();
   registerNavigationBarHandlers();
   registerScreenPinningHandlers();
+  registerKeepAwakeHandlers();
 
   console.log('[Bridge] All built-in handlers registered');
 };

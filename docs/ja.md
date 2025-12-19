@@ -248,6 +248,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | アプリ固定状態を取得 |
 | `startScreenPinning` | - | `{ success }` | ✅ | ❌ | アプリ固定を開始 |
 | `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | アプリ固定を停止 |
+| `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止状態を取得 |
+| `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を有効化 |
+| `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を無効化 |
 
 > ✅ 対応 | ⚠️ 一部対応 | ❌ 非対応
 

@@ -248,6 +248,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | 获取应用固定状态 |
 | `startScreenPinning` | - | `{ success }` | ✅ | ❌ | 开始应用固定 |
 | `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | 停止应用固定 |
+| `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 获取屏幕常亮状态 |
+| `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 激活屏幕常亮 |
+| `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 停用屏幕常亮 |
 
 > ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持
 

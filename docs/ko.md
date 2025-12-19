@@ -248,6 +248,9 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 | `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | 앱 고정 상태 조회 |
 | `startScreenPinning` | - | `{ success }` | ✅ | ❌ | 앱 고정 시작 |
 | `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | 앱 고정 해제 |
+| `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 상태 조회 |
+| `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 활성화 |
+| `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 비활성화 |
 
 > ✅ 지원 | ⚠️ 부분 지원 | ❌ 미지원
 
@@ -272,6 +275,26 @@ await AppBridge.call('startScreenPinning');
 // ⚠️ 일반 앱: 뒤로가기 + 최근 앱 버튼 동시 길게 누르기로 해제
 // Device Owner 앱만 프로그래밍 방식으로 해제 가능
 await AppBridge.call('stopScreenPinning');
+```
+
+
+---
+
+
+### 화면 절전 방지 (Keep Awake)
+
+앱이 실행 중일 때 화면이 자동으로 꺼지지 않도록 설정합니다.
+
+```javascript
+// 절전 방지 상태 확인
+const status = await AppBridge.call('getKeepAwake');
+console.log(status.isActive);  // true/false
+
+// 절전 방지 활성화 (화면이 계속 켜진 상태 유지)
+await AppBridge.call('activateKeepAwake');
+
+// 절전 방지 비활성화 (정상적인 절전 모드로 복귀)
+await AppBridge.call('deactivateKeepAwake');
 ```
 
 

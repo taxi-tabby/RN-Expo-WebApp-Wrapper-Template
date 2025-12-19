@@ -248,6 +248,9 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | Get screen pinning status |
 | `startScreenPinning` | - | `{ success }` | ✅ | ❌ | Start screen pinning |
 | `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | Stop screen pinning |
+| `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Get keep awake status |
+| `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Activate keep awake |
+| `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Deactivate keep awake |
 
 > ✅ Supported | ⚠️ Partial | ❌ Not supported
 
