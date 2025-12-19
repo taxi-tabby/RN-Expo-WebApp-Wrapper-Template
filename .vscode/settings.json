@@ -6,7 +6,10 @@
   },
   "java.project.sourcePaths": [],
   "java.import.exclusions": [
+    "**/node_modules/**",
     "**/modules/**"
   ],
-  "gradle.nestedProjects": false
+  "java.import.gradle.enabled": false,
+  "gradle.nestedProjects": false,
+  "gradle.autoDetect": "off"
 }
