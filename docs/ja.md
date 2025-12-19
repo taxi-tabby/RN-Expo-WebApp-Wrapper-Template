@@ -225,8 +225,8 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 
 | アクション | ペイロード | レスポンス | Android | iOS | 説明 |
 |------------|------------|------------|:-------:|:---:|------|
-| `getDeviceInfo` | - | `{ platform, version, isTV }` | ✅ | ✅ | デバイス情報を取得 |
-| `getAppInfo` | - | `{ name, version, bundleId }` | ✅ | ✅ | アプリ情報を取得 |
+| `getDeviceInfo` | - | `{ platform, version, isTV, brand, modelName, deviceName, osName, osVersion, deviceType, isDevice }` | ✅ | ✅ | デバイス情報を取得 |
+| `getAppInfo` | - | `{ name, version, buildVersion, bundleId }` | ✅ | ✅ | アプリ情報を取得 |
 | `showToast` | `{ message, duration? }` | - | ✅ | ⚠️ | トースト (iOS: Alert) |
 | `vibrate` | `{ pattern?: number[] }` | - | ✅ | ✅ | バイブレーションを発生 |
 | `copyToClipboard` | `{ text }` | `{ success }` | ✅ | ✅ | クリップボードにコピー |

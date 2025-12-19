@@ -225,8 +225,8 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 
 | 动作 | 载荷 | 响应 | Android | iOS | 说明 |
 |------|------|------|:-------:|:---:|------|
-| `getDeviceInfo` | - | `{ platform, version, isTV }` | ✅ | ✅ | 获取设备信息 |
-| `getAppInfo` | - | `{ name, version, bundleId }` | ✅ | ✅ | 获取应用信息 |
+| `getDeviceInfo` | - | `{ platform, version, isTV, brand, modelName, deviceName, osName, osVersion, deviceType, isDevice }` | ✅ | ✅ | 获取设备信息 |
+| `getAppInfo` | - | `{ name, version, buildVersion, bundleId }` | ✅ | ✅ | 获取应用信息 |
 | `showToast` | `{ message, duration? }` | - | ✅ | ⚠️ | Toast 消息 (iOS: Alert) |
 | `vibrate` | `{ pattern?: number[] }` | - | ✅ | ✅ | 触发振动 |
 | `copyToClipboard` | `{ text }` | `{ success }` | ✅ | ✅ | 复制到剪贴板 |

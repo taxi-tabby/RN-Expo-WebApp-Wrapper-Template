@@ -225,8 +225,8 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 
 | Action | Payload | Response | Android | iOS | Description |
 |--------|---------|----------|:-------:|:---:|-------------|
-| `getDeviceInfo` | - | `{ platform, version, isTV }` | ✅ | ✅ | Get device information |
-| `getAppInfo` | - | `{ name, version, bundleId }` | ✅ | ✅ | Get app information |
+| `getDeviceInfo` | - | `{ platform, version, isTV, brand, modelName, deviceName, osName, osVersion, deviceType, isDevice }` | ✅ | ✅ | Get device information |
+| `getAppInfo` | - | `{ name, version, buildVersion, bundleId }` | ✅ | ✅ | Get app information |
 | `showToast` | `{ message, duration? }` | - | ✅ | ⚠️ | Toast message (iOS: Alert) |
 | `vibrate` | `{ pattern?: number[] }` | - | ✅ | ✅ | Trigger vibration |
 | `copyToClipboard` | `{ text }` | `{ success }` | ✅ | ✅ | Copy text to clipboard |

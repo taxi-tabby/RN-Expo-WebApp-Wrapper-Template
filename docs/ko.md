@@ -225,8 +225,8 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 
 | 액션명 | 페이로드 | 응답 | Android | iOS | 설명 |
 |--------|----------|------|:-------:|:---:|------|
-| `getDeviceInfo` | - | `{ platform, version, isTV }` | ✅ | ✅ | 디바이스 정보 조회 |
-| `getAppInfo` | - | `{ name, version, bundleId }` | ✅ | ✅ | 앱 정보 조회 |
+| `getDeviceInfo` | - | `{ platform, version, isTV, brand, modelName, deviceName, osName, osVersion, deviceType, isDevice }` | ✅ | ✅ | 디바이스 정보 조회 |
+| `getAppInfo` | - | `{ name, version, buildVersion, bundleId }` | ✅ | ✅ | 앱 정보 조회 |
 | `showToast` | `{ message, duration? }` | - | ✅ | ⚠️ | 토스트 메시지 (iOS: Alert) |
 | `vibrate` | `{ pattern?: number[] }` | - | ✅ | ✅ | 진동 발생 |
 | `copyToClipboard` | `{ text }` | `{ success }` | ✅ | ✅ | 클립보드에 텍스트 복사 |

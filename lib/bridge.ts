@@ -243,23 +243,33 @@ export const callWeb = <T = unknown, R = unknown>(
 
 // 기본 내장 핸들러들
 export const registerBuiltInHandlers = () => {
-  // 디바이스 정보 요청
+  // 디바이스 정보 요청 (expo-device 사용 - 프로덕션 빌드에서도 동작)
   registerHandler('getDeviceInfo', async (_payload, respond) => {
     const { Platform } = await import('react-native');
+    const Device = await import('expo-device');
     respond({
       platform: Platform.OS,
       version: Platform.Version,
       isTV: Platform.isTV,
+      // expo-device 추가 정보
+      brand: Device.brand,
+      modelName: Device.modelName,
+      deviceName: Device.deviceName,
+      osName: Device.osName,
+      osVersion: Device.osVersion,
+      deviceType: Device.deviceType,
+      isDevice: Device.isDevice, // 실제 디바이스인지 에뮬레이터인지
     });
   });
 
-  // 앱 정보 요청
+  // 앱 정보 요청 (expo-application 사용 - 프로덕션 빌드에서도 동작)
   registerHandler('getAppInfo', async (_payload, respond) => {
-    const { APP_CONFIG } = await import('@/constants/app-config');
+    const Application = await import('expo-application');
     respond({
-      name: APP_CONFIG.app.name,
-      version: APP_CONFIG.app.version,
-      bundleId: APP_CONFIG.app.bundleId,
+      name: Application.applicationName,
+      version: Application.nativeApplicationVersion,
+      buildVersion: Application.nativeBuildVersion,
+      bundleId: Application.applicationId,
     });
   });
 
