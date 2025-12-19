@@ -7,9 +7,17 @@
   "java.project.sourcePaths": [],
   "java.import.exclusions": [
     "**/node_modules/**",
-    "**/modules/**"
+    "**/modules/**",
+    "**/android/**"
   ],
   "java.import.gradle.enabled": false,
+  "java.autobuild.enabled": false,
   "gradle.nestedProjects": false,
-  "gradle.autoDetect": "off"
+  "gradle.autoDetect": "off",
+  "gradle.javaDebug.cleanOutput": false,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/android/**": true,
+    "**/modules/**/android/**": true
+  }
 }
