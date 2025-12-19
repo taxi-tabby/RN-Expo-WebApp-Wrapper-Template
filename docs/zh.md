@@ -245,6 +245,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getNavigationBar` | - | `{ success, visible, buttonStyle, backgroundColor }` | ✅ | ❌ | 获取导航栏状态 |
 | `setNavigationBar` | `{ visible?, color?, buttonStyle?, behavior? }` | `{ success }` | ✅ | ❌ | 设置导航栏 |
 | `restoreNavigationBar` | - | `{ success, restored }` | ✅ | ❌ | 恢复导航栏 |
+| `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | 获取应用固定状态 |
+| `startScreenPinning` | - | `{ success }` | ✅ | ❌ | 开始应用固定 |
+| `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | 停止应用固定 |
 
 > ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持
 

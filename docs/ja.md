@@ -245,6 +245,9 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getNavigationBar` | - | `{ success, visible, buttonStyle, backgroundColor }` | ✅ | ❌ | ナビバー状態を取得 |
 | `setNavigationBar` | `{ visible?, color?, buttonStyle?, behavior? }` | `{ success }` | ✅ | ❌ | ナビバーを設定 |
 | `restoreNavigationBar` | - | `{ success, restored }` | ✅ | ❌ | ナビバーを復元 |
+| `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | アプリ固定状態を取得 |
+| `startScreenPinning` | - | `{ success }` | ✅ | ❌ | アプリ固定を開始 |
+| `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | アプリ固定を停止 |
 
 > ✅ 対応 | ⚠️ 一部対応 | ❌ 非対応
 

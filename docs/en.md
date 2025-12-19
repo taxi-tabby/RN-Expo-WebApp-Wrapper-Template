@@ -245,6 +245,9 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `getNavigationBar` | - | `{ success, visible, buttonStyle, backgroundColor }` | ✅ | ❌ | Get navigation bar state |
 | `setNavigationBar` | `{ visible?, color?, buttonStyle?, behavior? }` | `{ success }` | ✅ | ❌ | Set navigation bar |
 | `restoreNavigationBar` | - | `{ success, restored }` | ✅ | ❌ | Restore navigation bar |
+| `getScreenPinning` | - | `{ success, isPinned, lockTaskModeState }` | ✅ | ❌ | Get screen pinning status |
+| `startScreenPinning` | - | `{ success }` | ✅ | ❌ | Start screen pinning |
+| `stopScreenPinning` | - | `{ success }` | ✅ | ❌ | Stop screen pinning |
 
 > ✅ Supported | ⚠️ Partial | ❌ Not supported
 
