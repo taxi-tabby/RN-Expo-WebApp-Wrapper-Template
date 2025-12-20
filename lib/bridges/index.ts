@@ -3,7 +3,6 @@
  * 그룹별로 분리된 핸들러들을 통합 등록
  */
 
-import { registerHandler } from '../bridge';
 import { registerCameraHandlers } from './camera';
 import { registerClipboardHandlers } from './clipboard';
 import { registerDeviceHandlers } from './device';
