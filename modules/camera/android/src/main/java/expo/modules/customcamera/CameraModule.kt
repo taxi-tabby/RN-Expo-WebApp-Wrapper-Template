@@ -33,7 +33,16 @@ class CameraModule : Module() {
     private var isStreaming = false
     private var streamingEventName: String? = null
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val executor: Executor = ContextCompat.getMainExecutor(appContext.reactContext!!)
+    
+    // Lazy executor initialization to avoid null pointer exception
+    private val executor: Executor by lazy {
+        appContext.reactContext?.let { 
+            ContextCompat.getMainExecutor(it) 
+        } ?: run {
+            // Fallback executor
+            java.util.concurrent.Executors.newSingleThreadExecutor()
+        }
+    }
 
     override fun definition() = ModuleDefinition {
         Name("Camera")
