@@ -251,6 +251,12 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Get keep awake status |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Activate keep awake |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Deactivate keep awake |
+| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | Check camera permission |
+| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | Request camera permission |
+| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | Start camera (real-time frame streaming) |
+| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | Stop camera |
+| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | Get camera status |
+| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | Take photo (one-time) |
 
 > ✅ Supported | ⚠️ Partial | ❌ Not supported
 

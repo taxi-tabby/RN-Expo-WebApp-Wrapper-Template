@@ -251,51 +251,14 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 상태 조회 |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 활성화 |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 화면 절전 방지 비활성화 |
+| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 카메라 권한 확인 |
+| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 카메라 권한 요청 |
+| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | 카메라 시작 (실시간 프레임 스트리밍) |
+| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | 카메라 종료 |
+| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | 카메라 상태 조회 |
+| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | 사진 촬영 (일회성) |
 
 > ✅ 지원 | ⚠️ 부분 지원 | ❌ 미지원
-
-
----
-
-
-### 앱 고정 (Screen Pinning) - Android 전용
-
-Android의 앱 고정 기능을 사용하면 사용자가 다른 앱으로 전환할 수 없습니다.
-
-```javascript
-// 앱 고정 상태 확인
-const status = await AppBridge.call('getScreenPinning');
-console.log(status.isPinned);  // true/false
-// lockTaskModeState: 0=none, 1=pinned, 2=locked
-
-// 앱 고정 시작 (사용자 확인 다이얼로그 표시)
-await AppBridge.call('startScreenPinning');
-
-// 앱 고정 해제
-// ⚠️ 일반 앱: 뒤로가기 + 최근 앱 버튼 동시 길게 누르기로 해제
-// Device Owner 앱만 프로그래밍 방식으로 해제 가능
-await AppBridge.call('stopScreenPinning');
-```
-
-
----
-
-
-### 화면 절전 방지 (Keep Awake)
-
-앱이 실행 중일 때 화면이 자동으로 꺼지지 않도록 설정합니다.
-
-```javascript
-// 절전 방지 상태 확인
-const status = await AppBridge.call('getKeepAwake');
-console.log(status.isActive);  // true/false
-
-// 절전 방지 활성화 (화면이 계속 켜진 상태 유지)
-await AppBridge.call('activateKeepAwake');
-
-// 절전 방지 비활성화 (정상적인 절전 모드로 복귀)
-await AppBridge.call('deactivateKeepAwake');
-```
 
 
 ---

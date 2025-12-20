@@ -251,6 +251,12 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 获取屏幕常亮状态 |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 激活屏幕常亮 |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 停用屏幕常亮 |
+| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 检查相机权限 |
+| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 请求相机权限 |
+| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | 启动相机 (实时帧流) |
+| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | 停止相机 |
+| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | 获取相机状态 |
+| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | 拍照 (一次性) |
 
 > ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持
 

@@ -1,199 +1,239 @@
 /**
- * Camera Bridge Handler
- * 카메라 촬영 및 이미지 선택 기능
- * 
- * 웹에서 사용 예시:
- * const result = await AppBridge.call('takePhoto', { 
- *   quality: 0.8,
- *   maxWidth: 1920,
- *   maxHeight: 1080
- * });
- * // result.data = base64 인코딩된 이미지 데이터
- * 
- * 또는 File 객체 전송:
- * const fileInput = document.querySelector('input[type="file"]');
- * const file = fileInput.files[0];
- * await AppBridge.call('uploadImage', { image: file });
+ * Camera Bridge Handlers
+ * Provides real-time camera control with frame streaming to web
  */
 
-import { registerHandler } from '@/lib/bridge';
-import * as FileSystem from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
+import { Camera, CameraType, CameraView } from 'expo-camera';
+import type { BridgeHandler } from '../../bridge';
 
-export interface PhotoOptions {
-  /** 이미지 품질 (0~1) */
-  quality?: number;
-  /** 최대 가로 크기 */
-  maxWidth?: number;
-  /** 최대 세로 크기 */
-  maxHeight?: number;
-  /** 편집 허용 여부 */
-  allowsEditing?: boolean;
+// Camera state management
+interface CameraState {
+  isActive: boolean;
+  facing: CameraType;
+  eventKey?: string;
+  frameInterval?: ReturnType<typeof setInterval>;
 }
 
-export interface PhotoResult {
-  success: boolean;
-  /** base64 인코딩된 이미지 데이터 */
-  data?: string;
-  /** MIME 타입 */
-  mimeType?: string;
-  /** 파일 크기 (bytes) */
-  size?: number;
-  /** 이미지 가로 크기 */
-  width?: number;
-  /** 이미지 세로 크기 */
-  height?: number;
-  error?: string;
+let cameraState: CameraState = {
+  isActive: false,
+  facing: 'back',
+};
+
+let cameraRef: CameraView | null = null;
+
+/**
+ * Set camera ref from app component
+ * This must be called from the app to provide camera instance
+ */
+export function setCameraRef(ref: CameraView | null) {
+  cameraRef = ref;
 }
 
 /**
- * 카메라로 사진 촬영
+ * Get current camera ref
  */
-async function takePhoto(options: PhotoOptions = {}): Promise<PhotoResult> {
-  try {
-    // 권한 요청
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      return { 
-        success: false, 
-        error: '카메라 권한이 필요합니다.' 
-      };
-    }
+export function getCameraRef() {
+  return cameraRef;
+}
 
-    // 사진 촬영
-    const result = await ImagePicker.launchCameraAsync({
-      quality: options.quality ?? 0.8,
-      allowsEditing: options.allowsEditing ?? false,
+/**
+ * Check camera permission status
+ */
+export const checkCameraPermission: BridgeHandler = async (_payload, respond) => {
+  const { status } = await Camera.getCameraPermissionsAsync();
+  respond({
+    success: true,
+    data: {
+      granted: status === 'granted',
+      status,
+    },
+  });
+};
+
+/**
+ * Request camera permission
+ */
+export const requestCameraPermission: BridgeHandler = async (_payload, respond) => {
+  const { status } = await Camera.requestCameraPermissionsAsync();
+  respond({
+    success: true,
+    data: {
+      granted: status === 'granted',
+      status,
+    },
+  });
+};
+
+/**
+ * Start camera with real-time frame streaming
+ * @param facing - Camera facing direction ('front' | 'back')
+ * @param eventKey - Event key for streaming frames to web (optional)
+ * @param frameInterval - Frame capture interval in ms (default: 100ms)
+ */
+export const startCamera: BridgeHandler = async (payload, respond) => {
+  const params = (payload || {}) as { facing?: string; eventKey?: string; frameInterval?: number };
+  const { facing = 'back', eventKey, frameInterval = 100 } = params;
+
+  // Check permission first
+  const { status } = await Camera.getCameraPermissionsAsync();
+  if (status !== 'granted') {
+    respond({
+      success: false,
+      error: 'Camera permission not granted',
+    });
+    return;
+  }
+
+  // Update camera state
+  cameraState = {
+    isActive: true,
+    facing: facing as CameraType,
+    eventKey,
+  };
+
+  // If eventKey is provided, start frame streaming
+  if (eventKey && cameraRef) {
+    const interval = setInterval(async () => {
+      if (!cameraState.isActive || !cameraRef) {
+        clearInterval(interval);
+        return;
+      }
+
+      try {
+        // Capture frame from camera
+        const photo = await cameraRef.takePictureAsync({
+          quality: 0.5,
+          base64: true,
+          skipProcessing: true,
+        });
+
+        if (photo?.base64) {
+          // Send frame to web via event
+          // This will be handled by the bridge's sendToWeb function
+          const eventData = {
+            type: 'cameraFrame',
+            data: {
+              base64: `data:image/jpeg;base64,${photo.base64}`,
+              timestamp: Date.now(),
+              facing: cameraState.facing,
+            },
+          };
+
+          // Emit event to web (will be implemented in bridge)
+          if (typeof (global as any).__bridgeEmitEvent === 'function') {
+            (global as any).__bridgeEmitEvent(eventKey, eventData);
+          }
+        }
+      } catch (error) {
+        console.warn('[Camera] Frame capture error:', error);
+      }
+    }, frameInterval);
+
+    cameraState.frameInterval = interval;
+  }
+
+  respond({
+    success: true,
+    data: {
+      isActive: true,
+      facing: cameraState.facing,
+      eventKey,
+    },
+  });
+};
+
+/**
+ * Stop camera
+ */
+export const stopCamera: BridgeHandler = async (_payload, respond) => {
+  // Clear frame interval if exists
+  if (cameraState.frameInterval) {
+    clearInterval(cameraState.frameInterval);
+    cameraState.frameInterval = undefined;
+  }
+
+  cameraState.isActive = false;
+  cameraState.eventKey = undefined;
+
+  respond({
+    success: true,
+    data: {
+      isActive: false,
+    },
+  });
+};
+
+/**
+ * Get camera status
+ */
+export const getCameraStatus: BridgeHandler = async (_payload, respond) => {
+  respond({
+    success: true,
+    data: {
+      isActive: cameraState.isActive,
+      facing: cameraState.facing,
+      eventKey: cameraState.eventKey,
+      hasRef: cameraRef !== null,
+    },
+  });
+};
+
+/**
+ * Take a photo (one-time capture, not streaming)
+ */
+export const takePhoto: BridgeHandler = async (payload, respond) => {
+  const params = (payload || {}) as { quality?: number };
+  const { quality = 0.8 } = params;
+
+  if (!cameraRef) {
+    respond({
+      success: false,
+      error: 'Camera ref not set',
+    });
+    return;
+  }
+
+  const { status } = await Camera.getCameraPermissionsAsync();
+  if (status !== 'granted') {
+    respond({
+      success: false,
+      error: 'Camera permission not granted',
+    });
+    return;
+  }
+
+  try {
+    const photo = await cameraRef.takePictureAsync({
+      quality,
       base64: true,
-      exif: false,
     });
 
-    if (result.canceled) {
-      return { success: false, error: 'User cancelled' };
-    }
-
-    const asset = result.assets[0];
-    
-    return {
+    respond({
       success: true,
-      data: asset.base64 || '',
-      mimeType: asset.mimeType || 'image/jpeg',
-      width: asset.width,
-      height: asset.height,
-      size: asset.base64?.length || 0,
-    };
+      data: {
+        uri: photo.uri,
+        base64: photo.base64 ? `data:image/jpeg;base64,${photo.base64}` : undefined,
+        width: photo.width,
+        height: photo.height,
+      },
+    });
   } catch (error) {
-    return {
+    respond({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to take photo',
-    };
-  }
-}
-
-/**
- * 갤러리에서 이미지 선택
- */
-async function pickImage(options: PhotoOptions = {}): Promise<PhotoResult> {
-  try {
-    // 권한 요청
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      return { 
-        success: false, 
-        error: '갤러리 접근 권한이 필요합니다.' 
-      };
-    }
-
-    // 이미지 선택
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: options.quality ?? 0.8,
-      allowsEditing: options.allowsEditing ?? false,
-      base64: true,
-      exif: false,
     });
-
-    if (result.canceled) {
-      return { success: false, error: 'User cancelled' };
-    }
-
-    const asset = result.assets[0];
-    
-    return {
-      success: true,
-      data: asset.base64 || '',
-      mimeType: asset.mimeType || 'image/jpeg',
-      width: asset.width,
-      height: asset.height,
-      size: asset.base64?.length || 0,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to pick image',
-    };
   }
-}
+};
 
 /**
- * 웹에서 전송한 base64 이미지 처리 예제
+ * Register all camera handlers
  */
-async function processImageFromWeb(payload: any): Promise<{ success: boolean; savedPath?: string; error?: string }> {
-  try {
-    // base64 데이터 추출
-    if (payload.image && payload.image.type === 'base64') {
-      const { data, mimeType, name } = payload.image;
-      
-      // 파일 시스템에 저장
-      const filename = name || `image_${Date.now()}.jpg`;
-      const filepath = `${FileSystem.documentDirectory}${filename}`;
-      
-      await FileSystem.writeAsStringAsync(filepath, data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      console.log('[Camera] Image saved:', filepath);
-      
-      return {
-        success: true,
-        savedPath: filepath,
-      };
-    }
-
-    return {
-      success: false,
-      error: 'Invalid image data',
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to process image',
-    };
-  }
-}
-
-// ========================================
-// WebView 브릿지 핸들러
-// ========================================
-
-export const registerCameraHandlers = () => {
-  // 카메라로 사진 촬영
-  registerHandler('takePhoto', async (payload: PhotoOptions, respond) => {
-    const result = await takePhoto(payload);
-    respond(result);
-  });
-
-  // 갤러리에서 이미지 선택
-  registerHandler('pickImage', async (payload: PhotoOptions, respond) => {
-    const result = await pickImage(payload);
-    respond(result);
-  });
-
-  // 웹에서 전송한 이미지 처리 (File 객체 등)
-  registerHandler('uploadImage', async (payload, respond) => {
-    const result = await processImageFromWeb(payload);
-    respond(result);
-  });
-
+export function registerCameraHandlers(registerHandler: (name: string, handler: BridgeHandler) => void) {
+  registerHandler('checkCameraPermission', checkCameraPermission);
+  registerHandler('requestCameraPermission', requestCameraPermission);
+  registerHandler('startCamera', startCamera);
+  registerHandler('stopCamera', stopCamera);
+  registerHandler('getCameraStatus', getCameraStatus);
+  registerHandler('takePhoto', takePhoto);
   console.log('[Bridge] Camera handlers registered');
-};
+}

@@ -3,6 +3,8 @@
  * 그룹별로 분리된 핸들러들을 통합 등록
  */
 
+import { registerHandler } from '../bridge';
+import { registerCameraHandlers } from './camera';
 import { registerClipboardHandlers } from './clipboard';
 import { registerDeviceHandlers } from './device';
 import { registerKeepAwakeHandlers } from './keep-awake';
@@ -28,6 +30,7 @@ export const registerBuiltInHandlers = () => {
   registerNavigationBarHandlers();
   registerScreenPinningHandlers();
   registerKeepAwakeHandlers();
+  registerCameraHandlers(registerHandler);
 
   console.log('[Bridge] All built-in handlers registered');
 };

@@ -251,6 +251,12 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止状態を取得 |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を有効化 |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を無効化 |
+| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | カメラ権限を確認 |
+| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | カメラ権限を要求 |
+| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | カメラを起動 (リアルタイムフレームストリーミング) |
+| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | カメラを停止 |
+| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | カメラ状態を取得 |
+| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | 写真を撮影 (一回性) |
 
 > ✅ 対応 | ⚠️ 一部対応 | ❌ 非対応
 
