@@ -306,18 +306,13 @@ export const startRecord: BridgeHandler = async (payload, respond) => {
     }
   }
 
-  // Check microphone permission for video recording
-  let { status: micStatus } = await Camera.getMicrophonePermissionsAsync();
-  if (micStatus !== 'granted') {
-    const result = await Camera.requestMicrophonePermissionsAsync();
-    micStatus = result.status;
-  }
+  // Don't request microphone permission - this allows silent video recording without audio track
+  // (similar to Chrome mobile camera API behavior)
 
   try {
-    // Start recording
+    // Start recording (without audio track - silent recording)
     const recordingPromise = cameraRef.recordAsync({
       maxDuration: maxDuration,
-      mute: true, // 무음 녹화
     });
 
     recordingState = {
