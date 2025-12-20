@@ -43,7 +43,7 @@ app-example
 /android
 
 # local module build artifacts
-modules/**/android/build/
-modules/**/android/.gradle/
-modules/**/android/.cxx/
-modules/**/*.iml
+lib/bridges/**/android/build/
+lib/bridges/**/android/.gradle/
+lib/bridges/**/android/.cxx/
+lib/bridges/**/*.iml
