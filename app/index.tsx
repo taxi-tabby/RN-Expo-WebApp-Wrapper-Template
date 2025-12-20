@@ -26,7 +26,7 @@ export default function HomeScreen() {
   const hasReloaded = useRef(false);
 
   // 카메라 상태
-  const [cameraVisible, setCameraVisible] = useState(false);
+  // const [cameraVisible, setCameraVisible] = useState(false);
 
   // 오프라인 상태 감지
   useEffect(() => {
