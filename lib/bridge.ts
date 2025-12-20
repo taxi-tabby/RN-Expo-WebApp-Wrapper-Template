@@ -249,7 +249,14 @@ export const sendToWeb = <T = unknown>(action: string, payload?: T) => {
   `;
 
   webViewInstance.injectJavaScript(script);
-  console.log(`[Bridge] Sent to web: ${action}`, payload);
+  
+  // 로그 출력 조건: base64 데이터나 cameraFrame 같은 대용량 데이터는 로그 제외
+  const shouldLog = !action.includes('cameraFrame') && 
+    !JSON.stringify(payload || {}).includes('base64');
+  
+  if (shouldLog) {
+    console.log(`[Bridge] Sent to web: ${action}`, payload);
+  }
 };
 
 /**

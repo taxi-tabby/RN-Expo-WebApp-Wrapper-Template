@@ -233,7 +233,7 @@ export const startCamera: BridgeHandler = async (payload, respond) => {
             });
           }
         } catch (error) {
-          console.warn('[Camera] Frame capture error:', error);
+          // Silently ignore frame capture errors
         }
       }, frameInterval);
 
