@@ -6,10 +6,26 @@
 import { requireNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
-// Android에서만 네이티브 모듈 로드
-const CameraModule = Platform.OS === 'android' 
-  ? requireNativeModule('Camera')
-  : null;
+// Lazy 모듈 로드 (크래시 방지)
+let CameraModule: any = null;
+
+function getCameraModule() {
+  if (Platform.OS !== 'android') {
+    return null;
+  }
+  
+  if (CameraModule === null) {
+    try {
+      CameraModule = requireNativeModule('Camera');
+    } catch (error) {
+      console.error('[Camera] Failed to load native module:', error);
+      CameraModule = undefined; // 재시도 방지
+      return null;
+    }
+  }
+  
+  return CameraModule === undefined ? null : CameraModule;
+}
 
 export interface CameraPermissionStatus {
   /** 권한 승인 여부 */
@@ -65,10 +81,11 @@ export interface PhotoResult {
  * @returns 카메라 권한 상태
  */
 export async function checkCameraPermission(): Promise<CameraPermissionStatus> {
-  if (Platform.OS !== 'android' || !CameraModule) {
+  const module = getCameraModule();
+  if (!module) {
     return { granted: false, status: 'unavailable' };
   }
-  return await CameraModule.checkCameraPermission();
+  return await module.checkCameraPermission();
 }
 
 /**
@@ -76,10 +93,11 @@ export async function checkCameraPermission(): Promise<CameraPermissionStatus> {
  * @returns 권한 요청 결과
  */
 export async function requestCameraPermission(): Promise<CameraPermissionStatus> {
-  if (Platform.OS !== 'android' || !CameraModule) {
+  const module = getCameraModule();
+  if (!module) {
     return { granted: false, status: 'unavailable' };
   }
-  return await CameraModule.requestCameraPermission();
+  return await module.requestCameraPermission();
 }
 
 /**
@@ -87,10 +105,11 @@ export async function requestCameraPermission(): Promise<CameraPermissionStatus>
  * @returns 촬영 결과 및 파일 경로
  */
 export async function takePhoto(): Promise<PhotoResult> {
-  if (Platform.OS !== 'android' || !CameraModule) {
-    return { success: false, error: 'Only supported on Android' };
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
   }
-  return await CameraModule.takePhoto();
+  return await module.takePhoto();
 }
 
 /**
@@ -99,12 +118,13 @@ export async function takePhoto(): Promise<PhotoResult> {
  * @returns 녹화 시작 결과
  */
 export async function startCamera(options?: CameraRecordingOptions): Promise<RecordingResult> {
-  if (Platform.OS !== 'android' || !CameraModule) {
-    return { success: false, error: 'Only supported on Android' };
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
   }
   
   const { facing = 'back', eventKey } = options || {};
-  return await CameraModule.startCamera(facing, eventKey || null);
+  return await module.startCamera(facing, eventKey || null);
 }
 
 /**
@@ -112,10 +132,11 @@ export async function startCamera(options?: CameraRecordingOptions): Promise<Rec
  * @returns 녹화 중지 결과
  */
 export async function stopCamera(): Promise<RecordingResult> {
-  if (Platform.OS !== 'android' || !CameraModule) {
-    return { success: false, error: 'Only supported on Android' };
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
   }
-  return await CameraModule.stopCamera();
+  return await module.stopCamera();
 }
 
 /**
@@ -123,7 +144,8 @@ export async function stopCamera(): Promise<RecordingResult> {
  * @returns 현재 카메라 상태
  */
 export async function getCameraStatus(): Promise<CameraStatus> {
-  if (Platform.OS !== 'android' || !CameraModule) {
+  const module = getCameraModule();
+  if (!module) {
     return { 
       isRecording: false, 
       isStreaming: false, 
@@ -131,5 +153,5 @@ export async function getCameraStatus(): Promise<CameraStatus> {
       hasCamera: false 
     };
   }
-  return await CameraModule.getCameraStatus();
+  return await module.getCameraStatus();
 }
