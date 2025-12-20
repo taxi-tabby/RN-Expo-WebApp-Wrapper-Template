@@ -7,25 +7,14 @@ import { Camera, CameraType, CameraView } from 'expo-camera';
 import type { BridgeHandler } from '../../bridge';
 import { sendToWeb } from '../../bridge';
 
-// Camera state management
-interface CameraState {
-  isActive: boolean;
-  facing: CameraType;
-  eventKey?: string;
-  frameInterval?: ReturnType<typeof setInterval>;
-}
-
 // Recording state management
 interface RecordingState {
   isRecording: boolean;
   facing: CameraType;
   recordingPromise?: Promise<any>;
+  eventKey?: string;
+  frameInterval?: ReturnType<typeof setInterval>;
 }
-
-let cameraState: CameraState = {
-  isActive: false,
-  facing: 'back',
-};
 
 let recordingState: RecordingState = {
   isRecording: false,
@@ -100,128 +89,6 @@ export const requestCameraPermission: BridgeHandler = async (_payload, respond) 
 };
 
 /**
- * Start camera with real-time frame streaming
- * @param facing - Camera facing direction ('front' | 'back')
- * @param eventKey - Event key for streaming frames to web (optional)
- * @param frameInterval - Frame capture interval in ms (default: 100ms)
- */
-export const startCamera: BridgeHandler = async (payload, respond) => {
-  const params = (payload || {}) as { facing?: string; eventKey?: string; frameInterval?: number };
-  const { facing = 'back', eventKey, frameInterval = 100 } = params;
-
-  // Check and request permission if needed
-  let { status } = await Camera.getCameraPermissionsAsync();
-  if (status !== 'granted') {
-    const result = await Camera.requestCameraPermissionsAsync();
-    status = result.status;
-    
-    if (status !== 'granted') {
-      respond({
-        success: false,
-        error: 'Camera permission denied',
-      });
-      return;
-    }
-  }
-
-  if (!cameraRef) {
-    respond({
-      success: false,
-      error: 'Camera component not initialized. Please add <AppCameraView> to your app.',
-    });
-    return;
-  }
-
-  // Update camera state
-  cameraState = {
-    isActive: true,
-    facing: facing as CameraType,
-    eventKey,
-  };
-
-  // If eventKey is provided, start frame streaming
-  if (eventKey && cameraRef) {
-    const interval = setInterval(async () => {
-      if (!cameraState.isActive || !cameraRef) {
-        clearInterval(interval);
-        return;
-      }
-
-      try {
-        // Capture frame from camera (silent)
-        const photo = await cameraRef.takePictureAsync({
-          quality: 0.5,
-          base64: true,
-          skipProcessing: true,
-          shutterSound: false, // 무음 촬영
-        });
-
-        if (photo?.base64) {
-          // Send frame to web via sendToWeb
-          sendToWeb(eventKey, {
-            type: 'cameraFrame',
-            base64: `data:image/jpeg;base64,${photo.base64}`,
-            timestamp: Date.now(),
-            facing: cameraState.facing,
-            width: photo.width,
-            height: photo.height,
-          });
-        }
-      } catch (error) {
-        console.warn('[Camera] Frame capture error:', error);
-      }
-    }, frameInterval);
-
-    cameraState.frameInterval = interval;
-  }
-
-  respond({
-    success: true,
-    data: {
-      isActive: true,
-      facing: cameraState.facing,
-      eventKey,
-    },
-  });
-};
-
-/**
- * Stop camera
- */
-export const stopCamera: BridgeHandler = async (_payload, respond) => {
-  // Clear frame interval if exists
-  if (cameraState.frameInterval) {
-    clearInterval(cameraState.frameInterval);
-    cameraState.frameInterval = undefined;
-  }
-
-  cameraState.isActive = false;
-  cameraState.eventKey = undefined;
-
-  respond({
-    success: true,
-    data: {
-      isActive: false,
-    },
-  });
-};
-
-/**
- * Get camera status
- */
-export const getCameraStatus: BridgeHandler = async (_payload, respond) => {
-  respond({
-    success: true,
-    data: {
-      isActive: cameraState.isActive,
-      facing: cameraState.facing,
-      eventKey: cameraState.eventKey,
-      hasRef: cameraRef !== null,
-    },
-  });
-};
-
-/**
  * Take a photo (one-time capture, not streaming)
  */
 export const takePhoto: BridgeHandler = async (payload, respond) => {
@@ -256,7 +123,7 @@ export const takePhoto: BridgeHandler = async (payload, respond) => {
       quality,
       base64: true,
       isImageMirror: false,
-      shutterSound: false, // 무음 촬영
+      shutterSound: false, // 무음 촬영 (iOS)
     });
 
     respond({
@@ -279,9 +146,9 @@ export const takePhoto: BridgeHandler = async (payload, respond) => {
 /**
  * Start video recording
  */
-export const startRecord: BridgeHandler = async (payload, respond) => {
-  const params = (payload || {}) as { facing?: string; maxDuration?: number };
-  const { facing = 'back', maxDuration } = params;
+export const startCamera: BridgeHandler = async (payload, respond) => {
+  const params = (payload || {}) as { facing?: string; maxDuration?: number; eventKey?: string; frameInterval?: number };
+  const { facing = 'back', maxDuration, eventKey, frameInterval = 100 } = params;
 
   if (!cameraRef) {
     respond({
@@ -319,13 +186,51 @@ export const startRecord: BridgeHandler = async (payload, respond) => {
       isRecording: true,
       facing: facing as CameraType,
       recordingPromise,
+      eventKey,
     };
+
+    // If eventKey is provided, start frame streaming
+    if (eventKey && cameraRef) {
+      const interval = setInterval(async () => {
+        if (!recordingState.isRecording || !cameraRef) {
+          clearInterval(interval);
+          return;
+        }
+
+        try {
+          // Capture frame from camera (silent)
+          const photo = await cameraRef.takePictureAsync({
+            quality: 0.5,
+            base64: true,
+            skipProcessing: true,
+            shutterSound: false, // 무음 촬영 (iOS)
+          });
+
+          if (photo?.base64) {
+            // Send frame to web via sendToWeb
+            sendToWeb(eventKey, {
+              type: 'cameraFrame',
+              base64: `data:image/jpeg;base64,${photo.base64}`,
+              timestamp: Date.now(),
+              facing: recordingState.facing,
+              width: photo.width,
+              height: photo.height,
+            });
+          }
+        } catch (error) {
+          console.warn('[Camera] Frame capture error:', error);
+        }
+      }, frameInterval);
+
+      recordingState.frameInterval = interval;
+    }
 
     respond({
       success: true,
       data: {
         isRecording: true,
         facing: recordingState.facing,
+        eventKey,
       },
     });
 
@@ -341,7 +246,7 @@ export const startRecord: BridgeHandler = async (payload, respond) => {
 /**
  * Stop video recording
  */
-export const stopRecord: BridgeHandler = async (_payload, respond) => {
+export const stopCamera: BridgeHandler = async (_payload, respond) => {
   if (!cameraRef || !recordingState.isRecording) {
     respond({
       success: false,
@@ -351,6 +256,12 @@ export const stopRecord: BridgeHandler = async (_payload, respond) => {
   }
 
   try {
+    // Clear frame interval if exists
+    if (recordingState.frameInterval) {
+      clearInterval(recordingState.frameInterval);
+      recordingState.frameInterval = undefined;
+    }
+
     // Stop recording
     cameraRef.stopRecording();
 
@@ -361,6 +272,7 @@ export const stopRecord: BridgeHandler = async (_payload, respond) => {
       isRecording: false,
       facing: recordingState.facing,
       recordingPromise: undefined,
+      eventKey: undefined,
     };
 
     console.log('[Camera] Recording stopped:', video.uri);
@@ -375,6 +287,11 @@ export const stopRecord: BridgeHandler = async (_payload, respond) => {
   } catch (error) {
     recordingState.isRecording = false;
     recordingState.recordingPromise = undefined;
+    recordingState.eventKey = undefined;
+    if (recordingState.frameInterval) {
+      clearInterval(recordingState.frameInterval);
+      recordingState.frameInterval = undefined;
+    }
     
     respond({
       success: false,
@@ -386,12 +303,14 @@ export const stopRecord: BridgeHandler = async (_payload, respond) => {
 /**
  * Get recording status
  */
-export const getRecordStatus: BridgeHandler = async (_payload, respond) => {
+export const getCameraStatus: BridgeHandler = async (_payload, respond) => {
   respond({
     success: true,
     data: {
       isRecording: recordingState.isRecording,
       facing: recordingState.facing,
+      eventKey: recordingState.eventKey,
+      hasRef: cameraRef !== null,
     },
   });
 };
@@ -402,12 +321,9 @@ export const getRecordStatus: BridgeHandler = async (_payload, respond) => {
 export function registerCameraHandlers(registerHandler: (name: string, handler: BridgeHandler) => void) {
   registerHandler('checkCameraPermission', checkCameraPermission);
   registerHandler('requestCameraPermission', requestCameraPermission);
+  registerHandler('takePhoto', takePhoto);
   registerHandler('startCamera', startCamera);
   registerHandler('stopCamera', stopCamera);
   registerHandler('getCameraStatus', getCameraStatus);
-  registerHandler('takePhoto', takePhoto);
-  registerHandler('startRecord', startRecord);
-  registerHandler('stopRecord', stopRecord);
-  registerHandler('getRecordStatus', getRecordStatus);
   console.log('[Bridge] Camera handlers registered');
 }
