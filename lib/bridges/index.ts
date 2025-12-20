@@ -29,7 +29,7 @@ export const registerBuiltInHandlers = () => {
   registerNavigationBarHandlers();
   registerScreenPinningHandlers();
   registerKeepAwakeHandlers();
-  // registerCameraHandlers(); // 카메라 모듈 비활성화 - 웹뷰 충돌 이슈
+  registerCameraHandlers();
 
   console.log('[Bridge] All built-in handlers registered');
 };
