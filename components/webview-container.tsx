@@ -31,8 +31,11 @@ import {
   handleBridgeMessage,
   setBridgeWebView
 } from '@/lib/bridge';
-import { BRIDGE_CLIENT_SCRIPT } from '@/lib/bridge-client';
+import { getBridgeClientScript } from '@/lib/bridge-client';
 import { registerBuiltInHandlers } from '@/lib/bridges';
+
+// 브릿지 스크립트 즉시 생성
+const BRIDGE_CLIENT_SCRIPT = getBridgeClientScript();
 
 // WebView 인스턴스를 전역에서 접근 가능하도록 (네비게이션 제어용)
 export let webViewRef: React.RefObject<WebView | null>;

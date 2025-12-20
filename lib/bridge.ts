@@ -4,6 +4,34 @@
  */
 
 import type { WebView } from 'react-native-webview';
+import { getSecurityToken } from './bridge-client';
+
+// base64 디코딩 헬퍼
+const decodeBase64Data = (data: any): any => {
+  if (!data || typeof data !== 'object') return data;
+  
+  // base64 인코딩된 데이터 처리
+  if (data.__type === 'base64' && data.data) {
+    return {
+      type: 'base64',
+      data: data.data,
+      mimeType: data.mimeType,
+      name: data.name,
+      size: data.size,
+      // 필요시 Buffer로 변환 가능
+      toBuffer: () => Buffer.from(data.data, 'base64')
+    };
+  }
+
+  // 재귀적으로 객체 처리
+  const processed: any = Array.isArray(data) ? [] : {};
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      processed[key] = decodeBase64Data(data[key]);
+    }
+  }
+  return processed;
+};
 
 // 메시지 타입 정의
 export interface BridgeMessage<T = unknown> {
@@ -130,10 +158,21 @@ export const handleBridgeMessage = (messageData: string): boolean => {
       return false; // 브릿지 메시지가 아님
     }
 
+    // 보안 토큰 검증 (외부에서 보낸 메시지 차단)
+    if (data.__token !== getSecurityToken()) {
+      console.warn('[Bridge] Invalid security token. Message rejected.');
+      return false;
+    }
+
     const action = data.protocol.replace('app://', '');
+    
+    // base64 데이터 디코딩
+    const decodedPayload = decodeBase64Data(data.payload);
+    
     const message: BridgeMessage = {
       ...data,
       action,
+      payload: decodedPayload,
       timestamp: data.timestamp || Date.now(),
     };
 
