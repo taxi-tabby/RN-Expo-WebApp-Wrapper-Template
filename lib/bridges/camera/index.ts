@@ -15,8 +15,20 @@ interface CameraState {
   frameInterval?: ReturnType<typeof setInterval>;
 }
 
+// Recording state management
+interface RecordingState {
+  isRecording: boolean;
+  facing: CameraType;
+  recordingPromise?: Promise<any>;
+}
+
 let cameraState: CameraState = {
   isActive: false,
+  facing: 'back',
+};
+
+let recordingState: RecordingState = {
+  isRecording: false,
   facing: 'back',
 };
 
@@ -136,11 +148,12 @@ export const startCamera: BridgeHandler = async (payload, respond) => {
       }
 
       try {
-        // Capture frame from camera
+        // Capture frame from camera (silent)
         const photo = await cameraRef.takePictureAsync({
           quality: 0.5,
           base64: true,
           skipProcessing: true,
+          shutterSound: false, // 무음 촬영
         });
 
         if (photo?.base64) {
@@ -242,6 +255,8 @@ export const takePhoto: BridgeHandler = async (payload, respond) => {
     const photo = await cameraRef.takePictureAsync({
       quality,
       base64: true,
+      isImageMirror: false,
+      shutterSound: false, // 무음 촬영
     });
 
     respond({
@@ -262,6 +277,131 @@ export const takePhoto: BridgeHandler = async (payload, respond) => {
 };
 
 /**
+ * Start video recording
+ */
+export const startRecord: BridgeHandler = async (payload, respond) => {
+  const params = (payload || {}) as { facing?: string; maxDuration?: number };
+  const { facing = 'back', maxDuration } = params;
+
+  if (!cameraRef) {
+    respond({
+      success: false,
+      error: 'Camera component not initialized. Please add <AppCameraView> to your app.',
+    });
+    return;
+  }
+
+  // Check and request permission if needed
+  let { status } = await Camera.getCameraPermissionsAsync();
+  if (status !== 'granted') {
+    const result = await Camera.requestCameraPermissionsAsync();
+    status = result.status;
+    
+    if (status !== 'granted') {
+      respond({
+        success: false,
+        error: 'Camera permission denied',
+      });
+      return;
+    }
+  }
+
+  // Check microphone permission for video recording
+  let { status: micStatus } = await Camera.getMicrophonePermissionsAsync();
+  if (micStatus !== 'granted') {
+    const result = await Camera.requestMicrophonePermissionsAsync();
+    micStatus = result.status;
+  }
+
+  try {
+    // Start recording
+    const recordingPromise = cameraRef.recordAsync({
+      maxDuration: maxDuration,
+      mute: true, // 무음 녹화
+    });
+
+    recordingState = {
+      isRecording: true,
+      facing: facing as CameraType,
+      recordingPromise,
+    };
+
+    respond({
+      success: true,
+      data: {
+        isRecording: true,
+        facing: recordingState.facing,
+      },
+    });
+
+    console.log('[Camera] Recording started');
+  } catch (error) {
+    respond({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start recording',
+    });
+  }
+};
+
+/**
+ * Stop video recording
+ */
+export const stopRecord: BridgeHandler = async (_payload, respond) => {
+  if (!cameraRef || !recordingState.isRecording) {
+    respond({
+      success: false,
+      error: 'No recording in progress',
+    });
+    return;
+  }
+
+  try {
+    // Stop recording
+    cameraRef.stopRecording();
+
+    // Wait for recording to finish
+    const video = await recordingState.recordingPromise;
+
+    recordingState = {
+      isRecording: false,
+      facing: recordingState.facing,
+      recordingPromise: undefined,
+    };
+
+    console.log('[Camera] Recording stopped:', video.uri);
+
+    respond({
+      success: true,
+      data: {
+        isRecording: false,
+        uri: video?.uri,
+      },
+    });
+  } catch (error) {
+    recordingState.isRecording = false;
+    recordingState.recordingPromise = undefined;
+    
+    respond({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to stop recording',
+    });
+  }
+};
+
+/**
+ * Get recording status
+ */
+export const getRecordStatus: BridgeHandler = async (_payload, respond) => {
+  respond({
+    success: true,
+    data: {
+      isRecording: recordingState.isRecording,
+      facing: recordingState.facing,
+    },
+  });
+};
+
+/**
  * Register all camera handlers
  */
 export function registerCameraHandlers(registerHandler: (name: string, handler: BridgeHandler) => void) {
@@ -271,5 +411,8 @@ export function registerCameraHandlers(registerHandler: (name: string, handler: 
   registerHandler('stopCamera', stopCamera);
   registerHandler('getCameraStatus', getCameraStatus);
   registerHandler('takePhoto', takePhoto);
+  registerHandler('startRecord', startRecord);
+  registerHandler('stopRecord', stopRecord);
+  registerHandler('getRecordStatus', getRecordStatus);
   console.log('[Bridge] Camera handlers registered');
 }
