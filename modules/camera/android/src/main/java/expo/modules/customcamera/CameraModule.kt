@@ -302,6 +302,19 @@ class CameraModule : Module() {
 
                                 if (camera != null) {
                                     Log.d("CameraModule", "✓✓✓ Camera started successfully ✓✓✓")
+                                    
+                                    // 테스트 이벤트 발송 (이벤트 시스템 확인용)
+                                    try {
+                                        sendEvent("onCameraFrame", mapOf(
+                                            "type" to "test",
+                                            "message" to "Camera started - event system test",
+                                            "timestamp" to System.currentTimeMillis()
+                                        ))
+                                        Log.d("CameraModule", "✓ Test event sent")
+                                    } catch (e: Exception) {
+                                        Log.e("CameraModule", "Failed to send test event", e)
+                                    }
+                                    
                                     promise.resolve(mapOf(
                                         "success" to true,
                                         "isActive" to true,
