@@ -1,18 +1,18 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'maven-publish'
 
 group = 'expo.modules.custommicrophone'
-version = '0.1.0'
+version = '1.0.0'
 
 buildscript {
-  def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-  if (expoModulesCorePlugin.exists()) {
-    apply from: expoModulesCorePlugin
-    applyKotlinExpoModulesCorePlugin()
-  }
-
-  repositories {
-    mavenCentral()
+  def expoModulesCoreProject = rootProject.findProject(":expo-modules-core")
+  if (expoModulesCoreProject != null) {
+    def expoModulesCorePlugin = new File(expoModulesCoreProject.projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+    if (expoModulesCorePlugin.exists()) {
+      apply from: expoModulesCorePlugin
+      applyKotlinExpoModulesCorePlugin()
+    }
   }
 }
 
@@ -32,28 +32,33 @@ afterEvaluate {
 }
 
 android {
+  namespace "expo.modules.custommicrophone"
   compileSdkVersion safeExtGet("compileSdkVersion", 34)
 
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_11
-    targetCompatibility JavaVersion.VERSION_11
-  }
-
-  kotlinOptions {
-    jvmTarget = JavaVersion.VERSION_11.majorVersion
-  }
-
-  namespace "expo.modules.custommicrophone"
   defaultConfig {
     minSdkVersion safeExtGet("minSdkVersion", 23)
     targetSdkVersion safeExtGet("targetSdkVersion", 34)
   }
+  
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_17
+  }
+  
   lintOptions {
     abortOnError false
   }
 }
 
+repositories {
+  mavenCentral()
+}
+
 dependencies {
   implementation project(':expo-modules-core')
-  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
 }
