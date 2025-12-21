@@ -5,11 +5,13 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
 import android.util.Size
+import android.view.Surface
 import androidx.core.content.FileProvider
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -227,7 +229,8 @@ class CameraModule : Module() {
                 cleanupCamera()
                 
                 Log.d("CameraModule", "Getting ProcessCameraProvider...")
-                val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+                // Activity Context를 사용해야 디스플레이 정보를 가져올 수 있음
+                val cameraProviderFuture = ProcessCameraProvider.getInstance(activity)
                 
                 cameraProviderFuture.addListener({
                     try {
@@ -248,36 +251,44 @@ class CameraModule : Module() {
                             CameraSelector.DEFAULT_BACK_CAMERA
                         }
 
-                                // ImageCapture 설정 (가장 안정적인 설정)
-                                Log.d("CameraModule", "Creating ImageCapture...")
-                                imageCapture = ImageCapture.Builder()
-                                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                                    .setTargetRotation(activity.windowManager.defaultDisplay.rotation)
-                                    .build()
-                                Log.d("CameraModule", "✓ ImageCapture created")
+                        // ImageCapture 설정 (가장 안정적인 설정)
+                        Log.d("CameraModule", "Creating ImageCapture...")
+                        
+                        // 화면 회전 가져오기 (deprecated 방지)
+                        val rotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            context.display?.rotation ?: Surface.ROTATION_0
+                        } else {
+                            @Suppress("DEPRECATION")
+                            activity.windowManager.defaultDisplay.rotation
+                        }
+                        
+                        imageCapture = ImageCapture.Builder()
+                            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                            .setTargetRotation(rotation)
+                            .build()
+                        Log.d("CameraModule", "✓ ImageCapture created")
 
-                                val useCases = mutableListOf<UseCase>(imageCapture!!)
+                        val useCases = mutableListOf<UseCase>(imageCapture!!)
 
-                                // 스트리밍이 필요한 경우에만 ImageAnalysis 추가
-                                if (eventKey != null && eventKey.isNotEmpty()) {
-                                    Log.d("CameraModule", "Setting up streaming with eventKey: $eventKey")
-                                    streamingEventName = eventKey
-                                    isStreaming = true
-                                    lastFrameTime = 0L
+                        // 스트리밍이 필요한 경우에만 ImageAnalysis 추가
+                        if (eventKey != null && eventKey.isNotEmpty()) {
+                            Log.d("CameraModule", "Setting up streaming with eventKey: $eventKey")
+                            streamingEventName = eventKey
+                            isStreaming = true
+                            lastFrameTime = 0L
 
-                                    imageAnalyzer = ImageAnalysis.Builder()
-                                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                        .setTargetResolution(Size(640, 480))
-                                        .setTargetRotation(activity.windowManager.defaultDisplay.rotation)
-                                        .build()
-                                    
-                                    imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
-                                        processFrame(imageProxy)
-                                    }
-                                    
-                                    useCases.add(imageAnalyzer!!)
-                                    Log.d("CameraModule", "✓ ImageAnalyzer added")
-                                } else {
+                            imageAnalyzer = ImageAnalysis.Builder()
+                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                .setTargetRotation(rotation)
+                                .build()
+                            
+                            imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
+                                processFrame(imageProxy)
+                            }
+                            
+                            useCases.add(imageAnalyzer!!)
+                            Log.d("CameraModule", "✓ ImageAnalyzer added")
+                        } else {
                                     Log.d("CameraModule", "No streaming - ImageCapture only")
                                 }
 

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Button, StyleSheet, Alert, ScrollView } from 'react-native';
 import * as Camera from '@/modules/camera';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, Button, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CameraDebugScreen() {
   const [status, setStatus] = useState<string>('');
@@ -108,9 +110,15 @@ export default function CameraDebugScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>카메라 디버그</Text>
-      <Text style={styles.status}>{status}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← 뒤로</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>카메라 디버그</Text>
+        </View>
+        <Text style={styles.status}>{status}</Text>
 
       <View style={styles.buttons}>
         <Button title="1. 권한 확인" onPress={checkPermission} />
@@ -129,20 +137,36 @@ export default function CameraDebugScreen() {
           </Text>
         ))}
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  backButton: {
+    marginRight: 10,
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
   },
   status: {
     fontSize: 18,

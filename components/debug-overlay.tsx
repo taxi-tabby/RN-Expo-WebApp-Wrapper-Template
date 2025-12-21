@@ -1,10 +1,9 @@
 /**
- * 디버그 오버레이 컴포넌트
+ * 디버그  오버레이 컴포넌트
  * 웹뷰 위에 오버레이로 로그를 표시
  */
 
-import { documentDirectory, writeAsStringAsync } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { router } from 'expo-router';
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -113,17 +112,13 @@ const DebugOverlayComponent = React.forwardRef<DebugOverlayRef, DebugOverlayProp
       setLogs([]);
     }, []);
 
-    // 로그를 파일로 저장
+    // 로그를 파일로 저장 (콘솔에만 출력)
     const exportLogs = useCallback(async () => {
       try {
         if (logs.length === 0) {
           addLog('warn', '저장할 로그가 없습니다');
           return;
         }
-
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `debug-log-${timestamp}.txt`;
-        const filePath = `${documentDirectory}${fileName}`;
 
         let content = `=== DEBUG LOG EXPORT ===\n`;
         content += `생성 시간: ${new Date().toLocaleString('ko-KR')}\n`;
@@ -142,20 +137,13 @@ const DebugOverlayComponent = React.forwardRef<DebugOverlayRef, DebugOverlayProp
           content += '\n';
         });
 
-        await writeAsStringAsync(filePath, content);
+        // 콘솔에 전체 로그 출력
+        console.log(content);
         
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(filePath, {
-            mimeType: 'text/plain',
-            dialogTitle: '디버그 로그 내보내기',
-          });
-          addLog('success', `로그를 파일로 저장했습니다: ${fileName}`);
-        } else {
-          addLog('success', `로그를 저장했습니다: ${filePath}`);
-        }
+        addLog('success', '로그를 콘솔에 출력했습니다. 개발자 도구를 확인하세요.');
       } catch (error) {
-        console.error('로그 저장 실패:', error);
-        addLog('error', '로그 저장 실패', String(error));
+        console.error('로그 출력 실패:', error);
+        addLog('error', '로그 출력 실패', String(error));
       }
     }, [logs, addLog, formatTime]);
 
@@ -246,6 +234,16 @@ const DebugOverlayComponent = React.forwardRef<DebugOverlayRef, DebugOverlayProp
               activeOpacity={0.6}
             >
               <Text style={styles.headerButtonText}>{isExpanded ? '▼' : '▲'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => {
+                // @ts-ignore - camera-debug 경로는 런타임에 존재
+                router.push('/camera-debug');
+              }} 
+              style={styles.headerButton}
+              activeOpacity={0.6}
+            >
+              <Text style={styles.headerButtonText}>📷</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={exportLogs} 
