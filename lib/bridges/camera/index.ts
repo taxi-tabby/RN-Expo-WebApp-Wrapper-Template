@@ -142,5 +142,65 @@ export const registerCameraHandlers = () => {
     }
   });
 
+  // 크래시 로그 조회
+  registerHandler('getCrashLogs', async (_payload, respond) => {
+    try {
+      if (!Camera) {
+        respond({ success: false, error: 'Camera module not available' });
+        return;
+      }
+      
+      const result = await Camera.getCrashLogs();
+      respond(result);
+    } catch (error) {
+      respond({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to get crash logs' 
+      });
+    }
+  });
+
+  // 크래시 로그 공유
+  registerHandler('shareCrashLog', async (payload, respond) => {
+    try {
+      if (!Camera) {
+        respond({ success: false, error: 'Camera module not available' });
+        return;
+      }
+      
+      const { filePath } = payload as { filePath: string };
+      if (!filePath) {
+        respond({ success: false, error: 'filePath is required' });
+        return;
+      }
+      
+      const result = await Camera.shareCrashLog(filePath);
+      respond(result);
+    } catch (error) {
+      respond({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to share crash log' 
+      });
+    }
+  });
+
+  // 크래시 로그 삭제
+  registerHandler('clearCrashLogs', async (_payload, respond) => {
+    try {
+      if (!Camera) {
+        respond({ success: false, error: 'Camera module not available' });
+        return;
+      }
+      
+      const result = await Camera.clearCrashLogs();
+      respond(result);
+    } catch (error) {
+      respond({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to clear crash logs' 
+      });
+    }
+  });
+
   console.log('[Bridge] Camera handlers registered');
 };

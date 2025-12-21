@@ -67,6 +67,28 @@ export interface CameraStatus {
   hasCamera: boolean;
 }
 
+export interface CrashLog {
+  /** 파일명 */
+  name: string;
+  /** 파일 경로 */
+  path: string;
+  /** 파일 크기 (bytes) */
+  size: number;
+  /** 생성 날짜 (timestamp) */
+  date: number;
+}
+
+export interface CrashLogsResult {
+  /** 성공 여부 */
+  success: boolean;
+  /** 크래시 로그 목록 */
+  logs?: CrashLog[];
+  /** 로그 개수 */
+  count?: number;
+  /** 오류 메시지 */
+  error?: string;
+}
+
 export interface PhotoResult {
   /** 성공 여부 */
   success: boolean;
@@ -155,3 +177,41 @@ export async function getCameraStatus(): Promise<CameraStatus> {
   }
   return await module.getCameraStatus();
 }
+
+/**
+ * 크래시 로그 목록 가져오기
+ * @returns 크래시 로그 목록
+ */
+export async function getCrashLogs(): Promise<CrashLogsResult> {
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
+  }
+  return await module.getCrashLogs();
+}
+
+/**
+ * 크래시 로그 공유하기 (카카오톡, 이메일 등)
+ * @param filePath 공유할 로그 파일 경로
+ * @returns 공유 성공 여부
+ */
+export async function shareCrashLog(filePath: string): Promise<{ success: boolean; error?: string }> {
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
+  }
+  return await module.shareCrashLog(filePath);
+}
+
+/**
+ * 모든 크래시 로그 삭제
+ * @returns 삭제 성공 여부 및 삭제된 파일 수
+ */
+export async function clearCrashLogs(): Promise<{ success: boolean; deleted?: number; error?: string }> {
+  const module = getCameraModule();
+  if (!module) {
+    return { success: false, error: 'Camera module not available' };
+  }
+  return await module.clearCrashLogs();
+}
+
