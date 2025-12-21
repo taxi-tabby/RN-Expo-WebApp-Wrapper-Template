@@ -251,14 +251,21 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止状態を取得 |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を有効化 |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | スリープ防止を無効化 |
-| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | カメラ権限を確認 |
-| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | カメラ権限を要求 |
-| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | カメラを起動 (リアルタイムフレームストリーミング) |
-| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | カメラを停止 |
-| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | カメラ状態を取得 |
-| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | 写真を撮影 (一回性) |
+| `checkCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | カメラ/マイク権限を確認 |
+| `requestCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | カメラ/マイク権限を要求 |
+| `takePhoto` | `{ facing? }` | `{ success, base64, width, height, facing }` | ✅ | ❌ | 写真を撮影 (1フレーム, facing: 'front'|'back', デフォルト: 'back') |
+| `startCamera` | `{ facing? }` | `{ success, isActive, facing, isRecording, isStreaming }` | ✅ | ❌ | カメラストリーミングを起動 (リアルタイムフレーム送信) |
+| `stopCamera` | - | `{ success }` | ✅ | ❌ | カメラストリーミングを停止 |
+| `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ❌ | カメラ状態を取得 |
+
+**カメライベント:**
+- `onCameraFrame`: カメラフレームを受信 (startCamera後に自動発生)
+  - ペイロード: `{ type: 'cameraFrame', base64, width, height, frameNumber, timestamp }`
+  - 約1秒あたり10フレーム送信
 
 > ✅ 対応 | ⚠️ 一部対応 | ❌ 非対応
+>
+> **注意:** カメラ機能は現在Androidのみ対応しています。
 
 
 ---

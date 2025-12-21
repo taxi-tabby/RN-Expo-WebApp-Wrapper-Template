@@ -22,12 +22,13 @@ Select your language:
 
 ## ✨ Features
 
--  **WebView Wrapper** - Wrap any web application as a native app
--  **Bridge System** - Bidirectional communication between Web ↔ App
--  **Cross Platform** - Android & iOS support
--  **Custom Splash Screen** - Configurable splash screen
--  **Offline Support** - Custom offline screen
--  **Built-in Handlers** - Toast, vibration, clipboard, and more
+- 📱 **WebView Wrapper** - Wrap any web application as a native app
+- 🌉 **Bridge System** - Bidirectional communication between Web ↔ App
+- 📱 **Cross Platform** - Android & iOS support
+- 🎨 **Custom Splash Screen** - Configurable splash screen
+- 📡 **Offline Support** - Custom offline screen
+- 🛠️ **Built-in Handlers** - Toast, vibration, clipboard, and more
+- 📷 **Camera Integration** - Camera streaming & photo capture (Android only)
 
 
 ---

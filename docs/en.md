@@ -251,14 +251,21 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Get keep awake status |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Activate keep awake |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | Deactivate keep awake |
-| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | Check camera permission |
-| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | Request camera permission |
-| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | Start camera (real-time frame streaming) |
-| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | Stop camera |
-| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | Get camera status |
-| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | Take photo (one-time) |
+| `checkCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | Check camera/microphone permissions |
+| `requestCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | Request camera/microphone permissions |
+| `takePhoto` | `{ facing? }` | `{ success, base64, width, height, facing }` | ✅ | ❌ | Take photo (1 frame, facing: 'front'\|'back', default: 'back') |
+| `startCamera` | `{ facing? }` | `{ success, isActive, facing, isRecording, isStreaming }` | ✅ | ❌ | Start camera streaming (real-time frame transmission) |
+| `stopCamera` | - | `{ success }` | ✅ | ❌ | Stop camera streaming |
+| `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ❌ | Get camera status |
+
+**Camera Events:**
+- `onCameraFrame`: Receive camera frames (auto-triggered after startCamera)
+  - Payload: `{ type: 'cameraFrame', base64, width, height, frameNumber, timestamp }`
+  - Approx. 10 frames per second
 
 > ✅ Supported | ⚠️ Partial | ❌ Not supported
+>
+> **Note:** Camera features are currently supported on Android only.
 
 
 ---

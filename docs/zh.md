@@ -251,14 +251,21 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 获取屏幕常亮状态 |
 | `activateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 激活屏幕常亮 |
 | `deactivateKeepAwake` | - | `{ success, isActive }` | ✅ | ✅ | 停用屏幕常亮 |
-| `checkCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 检查相机权限 |
-| `requestCameraPermission` | - | `{ success, granted, status }` | ✅ | ✅ | 请求相机权限 |
-| `startCamera` | `{ facing?, eventKey?, frameInterval? }` | `{ success, isActive, facing, eventKey }` | ✅ | ✅ | 启动相机 (实时帧流) |
-| `stopCamera` | - | `{ success, isActive }` | ✅ | ✅ | 停止相机 |
-| `getCameraStatus` | - | `{ success, isActive, facing, eventKey, hasRef }` | ✅ | ✅ | 获取相机状态 |
-| `takePhoto` | `{ quality? }` | `{ success, uri, base64, width, height }` | ✅ | ✅ | 拍照 (一次性) |
+| `checkCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | 检查相机/麦克风权限 |
+| `requestCameraPermission` | - | `{ success, granted, cameraGranted, micGranted, status }` | ✅ | ❌ | 请求相机/麦克风权限 |
+| `takePhoto` | `{ facing? }` | `{ success, base64, width, height, facing }` | ✅ | ❌ | 拍照 (1帧, facing: 'front'|'back', 默认值: 'back') |
+| `startCamera` | `{ facing? }` | `{ success, isActive, facing, isRecording, isStreaming }` | ✅ | ❌ | 启动相机流 (实时帧传输) |
+| `stopCamera` | - | `{ success }` | ✅ | ❌ | 停止相机流 |
+| `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ❌ | 获取相机状态 |
+
+**相机事件：**
+- `onCameraFrame`: 接收相机帧 (startCamera后自动触发)
+  - 负载: `{ type: 'cameraFrame', base64, width, height, frameNumber, timestamp }`
+  - 每秒约10帧
 
 > ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持
+>
+> **注意：** 相机功能目前仅支持Android。
 
 
 ---
