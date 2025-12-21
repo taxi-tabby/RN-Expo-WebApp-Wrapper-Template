@@ -304,9 +304,11 @@ class CameraModule : Module() {
                                     Log.d("CameraModule", "✓✓✓ Camera started successfully ✓✓✓")
                                     promise.resolve(mapOf(
                                         "success" to true,
+                                        "isActive" to true,
                                         "facing" to facing,
                                         "isRecording" to false,
-                                        "isStreaming" to isStreaming
+                                        "isStreaming" to isStreaming,
+                                        "eventKey" to eventKey
                                     ))
                                 } else {
                                     Log.e("CameraModule", "ERROR: Camera object is null after binding")
@@ -581,7 +583,10 @@ class CameraModule : Module() {
 
     private fun processFrame(imageProxy: ImageProxy) {
         try {
+            Log.d("CameraModule", "processFrame called - isStreaming: $isStreaming, eventName: $streamingEventName")
+            
             if (!isStreaming || streamingEventName == null) {
+                Log.w("CameraModule", "Frame skipped - streaming disabled or no event name")
                 imageProxy.close()
                 return
             }
@@ -592,6 +597,8 @@ class CameraModule : Module() {
                 return
             }
             lastFrameTime = currentTime
+            
+            Log.d("CameraModule", "Processing frame - converting to bitmap...")
 
             val bitmap = imageProxy.toBitmap()
             val matrix = Matrix()
@@ -602,14 +609,21 @@ class CameraModule : Module() {
             val out = ByteArrayOutputStream()
             rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, out)
             val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+            
+            Log.d("CameraModule", "Frame encoded - size: ${base64.length} bytes, sending event...")
 
             mainHandler.post {
-                sendEvent("onCameraFrame", mapOf(
-                    "type" to "cameraFrame",
-                    "base64" to "data:image/jpeg;base64,$base64",
-                    "width" to rotatedBitmap.width,
-                    "height" to rotatedBitmap.height
-                ))
+                try {
+                    sendEvent("onCameraFrame", mapOf(
+                        "type" to "cameraFrame",
+                        "base64" to "data:image/jpeg;base64,$base64",
+                        "width" to rotatedBitmap.width,
+                        "height" to rotatedBitmap.height
+                    ))
+                    Log.d("CameraModule", "✓ Frame event sent successfully")
+                } catch (e: Exception) {
+                    Log.e("CameraModule", "Failed to send frame event", e)
+                }
             }
 
             bitmap.recycle()

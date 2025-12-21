@@ -152,23 +152,23 @@ export const registerCameraHandlers = () => {
     try {
       if (!Camera) {
         respond({ 
-          success: true,
-          data: {
-            isRecording: false,
-            isStreaming: false,
-            facing: 'back',
-            hasCamera: false
-          }
+          isRecording: false,
+          isStreaming: false,
+          facing: 'back',
+          hasCamera: false
         });
         return;
       }
       
       const status = await Camera.getCameraStatus();
-      respond({ success: true, data: status });
+      respond(status);
     } catch (error) {
       respond({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get camera status' 
+        isRecording: false,
+        isStreaming: false,
+        facing: 'back',
+        hasCamera: false,
+        error: error instanceof Error ? error.message : 'Failed to get camera status'
       });
     }
   });

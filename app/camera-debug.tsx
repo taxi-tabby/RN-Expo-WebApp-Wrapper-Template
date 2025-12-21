@@ -119,6 +119,23 @@ export default function CameraDebugScreen() {
     }
   };
 
+  const checkCameraStatus = async () => {
+    try {
+      addLog('카메라 상태 확인 중...');
+      const result = await Camera.getCameraStatus();
+      addLog(`카메라 상태: ${JSON.stringify(result)}`);
+      
+      Alert.alert(
+        '카메라 상태',
+        `실행 중: ${result.isRecording ? '예' : '아니오'}\n` +
+        `스트리밍: ${result.isStreaming ? '예' : '아니오'}\n` +
+        `카메라 사용 가능: ${result.hasCamera ? '예' : '아니오'}`
+      );
+    } catch (error) {
+      addLog(`상태 확인 실패: ${error}`);
+    }
+  };
+
   const getCrashLogs = async () => {
     try {
       addLog('크래시 로그 조회 중...');
@@ -145,6 +162,37 @@ export default function CameraDebugScreen() {
       }
     } catch (error) {
       addLog(`크래시 로그 조회 실패: ${error}`);
+    }
+  };
+
+  const clearCrashLogs = async () => {
+    try {
+      Alert.alert(
+        '크래시 로그 삭제',
+        '모든 크래시 로그를 삭제하시겠습니까?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '삭제',
+            style: 'destructive',
+            onPress: async () => {
+              addLog('크래시 로그 삭제 중...');
+              const result = await Camera.clearCrashLogs();
+              if (result.success) {
+                addLog(`크래시 로그 ${result.deleted}개 삭제됨`);
+                setCrashLogs([]);
+                Alert.alert('완료', `${result.deleted}개의 로그를 삭제했습니다.`);
+              } else {
+                addLog(`삭제 실패: ${result.error}`);
+                Alert.alert('실패', result.error || '삭제 중 오류 발생');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      addLog(`크래시 로그 삭제 실패: ${error}`);
+      Alert.alert('오류', String(error));
     }
   };
 
@@ -197,7 +245,9 @@ export default function CameraDebugScreen() {
         <Button title="2. 권한 요청" onPress={requestPermission} />
         <Button title="3. 카메라 시작" onPress={startCamera} />
         <Button title="4. 카메라 중지" onPress={stopCamera} />
+        <Button title="5. 카메라 상태 확인" onPress={checkCameraStatus} color="#4CAF50" />
         <Button title="크래시 로그 보기" onPress={getCrashLogs} color="#ff6b6b" />
+        <Button title="크래시 로그 삭제" onPress={clearCrashLogs} color="#d32f2f" />
         <Button title="로그 클리어" onPress={clearLogs} color="#999" />
       </View>
 
