@@ -1,14 +1,14 @@
-import Microphone, {
-  checkMicrophonePermission,
-  requestMicrophonePermission,
-  startRecording,
-  stopRecording,
-  getMicrophoneStatus,
-  type MicrophonePermissionResult,
-  type MicrophoneStatusResult,
-  type AudioChunkEvent,
-} from '@/modules/microphone';
 import { registerHandler, sendToWeb } from '@/lib/bridge';
+import Microphone, {
+    checkMicrophonePermission,
+    getMicrophoneStatus,
+    requestMicrophonePermission,
+    startRecording,
+    stopRecording,
+    type AudioChunkEvent,
+    type MicrophonePermissionResult,
+    type MicrophoneStatusResult,
+} from '@/modules/microphone';
 
 let audioChunkSubscription: any = null;
 
@@ -83,14 +83,10 @@ export function registerMicrophoneHandlers() {
 }
 
 export {
-  checkMicrophonePermission,
-  requestMicrophonePermission,
-  startRecording,
-  stopRecording,
-  getMicrophoneStatus,
-  type MicrophonePermissionResult,
-  type MicrophoneStatusResult,
-  type AudioChunkEvent,
+    checkMicrophonePermission, getMicrophoneStatus, requestMicrophonePermission,
+    startRecording,
+    stopRecording, type AudioChunkEvent, type MicrophonePermissionResult,
+    type MicrophoneStatusResult
 };
 
 export default Microphone;

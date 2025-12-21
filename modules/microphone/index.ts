@@ -1,4 +1,4 @@
-import { requireNativeModule, Platform } from 'expo-modules-core';
+import { requireNativeModule } from 'expo-modules-core';
 
 const MicrophoneModule = requireNativeModule('Microphone');
 
