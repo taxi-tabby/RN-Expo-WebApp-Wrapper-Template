@@ -56,8 +56,6 @@ export interface CameraRecordingOptions {
 export interface RecordingResult {
   /** 성공 여부 */
   success: boolean;
-  /** 녹화 여부 */
-  isRecording?: boolean;
   /** 스트리밍 여부 */
   isStreaming?: boolean;
   /** 오류 메시지 */
@@ -65,8 +63,6 @@ export interface RecordingResult {
 }
 
 export interface CameraStatus {
-  /** 녹화 여부 */
-  isRecording: boolean;
   /** 스트리밍 여부 */
   isStreaming: boolean;
   /** 카메라 방향 */
@@ -193,7 +189,6 @@ export async function getCameraStatus(): Promise<CameraStatus> {
   const module = getCameraModule();
   if (!module) {
     return { 
-      isRecording: false, 
       isStreaming: false, 
       facing: 'back',
       hasCamera: false 

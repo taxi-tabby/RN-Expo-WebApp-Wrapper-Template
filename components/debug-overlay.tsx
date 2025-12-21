@@ -236,16 +236,6 @@ const DebugOverlayComponent = React.forwardRef<DebugOverlayRef, DebugOverlayProp
               <Text style={styles.headerButtonText}>{isExpanded ? '▼' : '▲'}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => {
-                // @ts-ignore - camera-debug 경로는 런타임에 존재
-                router.push('/camera-debug');
-              }} 
-              style={styles.headerButton}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.headerButtonText}>📷</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
               onPress={exportLogs} 
               style={styles.headerButton}
               activeOpacity={0.6}

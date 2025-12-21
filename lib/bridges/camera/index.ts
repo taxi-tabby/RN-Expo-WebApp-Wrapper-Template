@@ -31,21 +31,12 @@ export const registerCameraHandlers = () => {
     if (nativeModule) {
       eventEmitter = new NativeEventEmitter(nativeModule);
       
-      // 녹화 완료/에러 이벤트
-      eventEmitter.addListener('onRecordingFinished', (data: any) => {
-        console.log('[Bridge] Recording finished event received');
-        sendToWeb('onRecordingFinished', data);
-      });
-      
-      eventEmitter.addListener('onRecordingError', (data: any) => {
-        console.log('[Bridge] Recording error event received');
-        sendToWeb('onRecordingError', data);
-      });
-      
       // 프레임 데이터 수신 - 고정 이벤트로 Web에 전달
       eventEmitter.addListener('onCameraFrame', (data: any) => {
-        console.log(`[Bridge] ✓ Frame received, forwarding to web`);
+        console.log(`[Bridge] ✓ Frame received - type: ${data?.type}, size: ${data?.base64?.length || 0}`);
+        console.log(`[Bridge] Calling sendToWeb('onCameraFrame', ...)`);
         sendToWeb('onCameraFrame', data);
+        console.log(`[Bridge] sendToWeb call completed`);
       });
       
       console.log('[Bridge] ✓ Camera event listeners registered');
@@ -158,7 +149,6 @@ export const registerCameraHandlers = () => {
     try {
       if (!Camera) {
         respond({ 
-          isRecording: false,
           isStreaming: false,
           facing: 'back',
           hasCamera: false
@@ -170,7 +160,6 @@ export const registerCameraHandlers = () => {
       respond(status);
     } catch (error) {
       respond({ 
-        isRecording: false,
         isStreaming: false,
         facing: 'back',
         hasCamera: false,

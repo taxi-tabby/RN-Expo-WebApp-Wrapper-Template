@@ -271,6 +271,10 @@ export const getBridgeClientScript = (): string => {
      * 내부: 앱 메시지 처리
      */
     _handleMessage: function(message) {
+      console.log('[AppBridge] _handleMessage called', message);
+      console.log('[AppBridge] message.action:', message.action);
+      console.log('[AppBridge] _listeners:', this._listeners);
+      
       // 응답 메시지 처리
       if (message.action === 'bridgeResponse') {
         this._handleResponse(message.payload);
@@ -281,9 +285,17 @@ export const getBridgeClientScript = (): string => {
       if (this._listeners) {
         // 특정 액션 리스너
         if (this._listeners[message.action]) {
+          console.log('[AppBridge] Found ' + this._listeners[message.action].length + ' listener(s) for: ' + message.action);
           this._listeners[message.action].forEach(function(cb) {
-            try { cb(message.payload, message); } catch(e) { console.error(e); }
+            try { 
+              console.log('[AppBridge] Calling listener for: ' + message.action);
+              cb(message.payload, message); 
+            } catch(e) { 
+              console.error('[AppBridge] Listener error:', e); 
+            }
           });
+        } else {
+          console.log('[AppBridge] No listeners for action: ' + message.action);
         }
         // 와일드카드 리스너
         if (this._listeners['*']) {
@@ -291,6 +303,8 @@ export const getBridgeClientScript = (): string => {
             try { cb(message.payload, message); } catch(e) { console.error(e); }
           });
         }
+      } else {
+        console.log('[AppBridge] No _listeners object!');
       }
     },
 
@@ -310,6 +324,7 @@ export const getBridgeClientScript = (): string => {
 
   // 앱에서 온 메시지 수신 리스너
   window.addEventListener('nativeMessage', function(e) {
+    console.log('[AppBridge] nativeMessage event received', e.detail);
     window.AppBridge._handleMessage(e.detail);
   });
 
