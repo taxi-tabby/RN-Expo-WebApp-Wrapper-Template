@@ -160,18 +160,17 @@ export async function takePhoto(): Promise<PhotoResult> {
 }
 
 /**
- * 비디오 녹화 시작 (선택적으로 프레임 스트리밍)
- * @param options 녹화 옵션 (카메라 방향, 이벤트 키)
- * @returns 녹화 시작 결과
+ * 카메라 스트리밍 시작
+ * @param facing 카메라 방향 (front/back)
+ * @returns 시작 결과
  */
-export async function startCamera(options?: CameraRecordingOptions): Promise<RecordingResult> {
+export async function startCamera(facing?: 'front' | 'back'): Promise<RecordingResult> {
   const module = getCameraModule();
   if (!module) {
     return { success: false, error: 'Camera module not available' };
   }
   
-  const { facing = 'back', eventKey } = options || {};
-  return await module.startCamera(facing, eventKey || null);
+  return await module.startCamera(facing || 'back');
 }
 
 /**

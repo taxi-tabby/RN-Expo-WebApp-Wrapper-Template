@@ -42,11 +42,10 @@ export const registerCameraHandlers = () => {
         sendToWeb('onRecordingError', data);
       });
       
-      // 프레임 데이터 수신 - eventKey로 Web에 전달
+      // 프레임 데이터 수신 - 고정 이벤트로 Web에 전달
       eventEmitter.addListener('onCameraFrame', (data: any) => {
-        const targetEventKey = data?.eventKey || 'onCameraFrame';
-        console.log(`[Bridge] ✓ Frame received, forwarding to web as: ${targetEventKey}`);
-        sendToWeb(targetEventKey, data);
+        console.log(`[Bridge] ✓ Frame received, forwarding to web`);
+        sendToWeb('onCameraFrame', data);
       });
       
       console.log('[Bridge] ✓ Camera event listeners registered');
@@ -118,22 +117,14 @@ export const registerCameraHandlers = () => {
   // 카메라 스트리밍 시작
   registerHandler('startCamera', async (payload, respond) => {
     try {
-      console.log('[Bridge] startCamera called, payload:', JSON.stringify(payload));
-      
       if (!Camera) {
         respond({ success: false, error: 'Camera module not available' });
         return;
       }
       
-      const options = payload as { facing?: 'front' | 'back'; eventKey?: string };
-      const eventKey = options?.eventKey || 'cameraFrame';
+      const options = payload as { facing?: 'front' | 'back' };
+      const result = await Camera.startCamera(options?.facing || 'back');
       
-      console.log(`[Bridge] Starting camera - eventKey: ${eventKey}, facing: ${options?.facing || 'back'}`);
-      
-      // Native에 eventKey 전달 (Native가 데이터에 포함시켜 보냄)
-      const result = await Camera.startCamera(options?.facing || 'back', eventKey);
-      
-      console.log('[Bridge] Camera started:', JSON.stringify(result));
       respond(result);
     } catch (error) {
       console.error('[Bridge] startCamera error:', error);

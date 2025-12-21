@@ -39,7 +39,6 @@ class CameraModule : Module() {
     private var recording: Recording? = null
     private var imageAnalyzer: ImageAnalysis? = null
     private var isStreaming = false
-    private var streamingEventName: String? = null
     private var lastFrameTime = 0L
     private val TARGET_FPS = 10.0
     private val FRAME_INTERVAL_MS = (1000.0 / TARGET_FPS).toLong()
@@ -183,12 +182,12 @@ class CameraModule : Module() {
             }
         }
 
-        // 카메라 시작 - 가장 안정적이고 단순한 버전
-        AsyncFunction("startCamera") { facing: String, eventKey: String?, promise: Promise ->
+        // 카메라 시작
+        AsyncFunction("startCamera") { facing: String, promise: Promise ->
             saveDebugLog("=== startCamera START ===")
-            saveDebugLog("Parameters - facing: $facing, eventKey: $eventKey")
+            saveDebugLog("Parameters - facing: $facing")
             Log.d("CameraModule", "=== startCamera START ===")
-            Log.d("CameraModule", "Parameters - facing: $facing, eventKey: $eventKey")
+            Log.d("CameraModule", "Parameters - facing: $facing")
             
             try {
                 val context = appContext.reactContext
@@ -289,72 +288,50 @@ class CameraModule : Module() {
 
                         val useCases = mutableListOf<UseCase>(imageCapture!!)
 
-                        // 스트리밍이 필요한 경우에만 ImageAnalysis 추가
-                        if (eventKey != null && eventKey.isNotEmpty()) {
-                            saveDebugLog("Setting up streaming with eventKey: $eventKey")
-                            Log.d("CameraModule", "Setting up streaming with eventKey: $eventKey")
-                            streamingEventName = eventKey
-                            isStreaming = true
-                            lastFrameTime = 0L
+                        // 프레임 스트리밍 설정
+                        saveDebugLog("Setting up frame streaming...")
+                        Log.d("CameraModule", "Setting up frame streaming...")
+                        isStreaming = true
+                        lastFrameTime = 0L
 
-                            imageAnalyzer = ImageAnalysis.Builder()
-                                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                                .setTargetRotation(rotation)
-                                .build()
+                        imageAnalyzer = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setTargetRotation(rotation)
+                            .build()
+                        
+                        imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
+                            processFrame(imageProxy)
+                        }
+                        
+                        useCases.add(imageAnalyzer!!)
+                        saveDebugLog("✓ ImageAnalyzer added")
+                        Log.d("CameraModule", "✓ ImageAnalyzer added")
+
+                        // 카메라 바인딩
+                        saveDebugLog("Binding ${useCases.size} use cases to lifecycle...")
+                        Log.d("CameraModule", "Binding ${useCases.size} use cases to lifecycle...")
+                        camera = cameraProvider?.bindToLifecycle(
+                            lifecycleOwner,
+                            cameraSelector,
+                            *useCases.toTypedArray()
+                        )
+
+                        if (camera != null) {
+                            saveDebugLog("✓✓✓ Camera started successfully ✓✓✓")
+                            Log.d("CameraModule", "✓✓✓ Camera started successfully ✓✓✓")
                             
-                            imageAnalyzer?.setAnalyzer(cameraExecutor) { imageProxy ->
-                                processFrame(imageProxy)
-                            }
-                            
-                            useCases.add(imageAnalyzer!!)
-                            saveDebugLog("✓ ImageAnalyzer added")
-                            Log.d("CameraModule", "✓ ImageAnalyzer added")
+                            promise.resolve(mapOf(
+                                "success" to true,
+                                "isActive" to true,
+                                "facing" to facing,
+                                "isRecording" to false,
+                                "isStreaming" to isStreaming
+                            ))
                         } else {
-                                    saveDebugLog("No streaming - ImageCapture only")
-                                    Log.d("CameraModule", "No streaming - ImageCapture only")
-                                }
-
-                                // 카메라 바인딩
-                                saveDebugLog("Binding ${useCases.size} use cases to lifecycle...")
-                                Log.d("CameraModule", "Binding ${useCases.size} use cases to lifecycle...")
-                                camera = cameraProvider?.bindToLifecycle(
-                                    lifecycleOwner,
-                                    cameraSelector,
-                                    *useCases.toTypedArray()
-                                )
-
-                                if (camera != null) {
-                                    saveDebugLog("✓✓✓ Camera started successfully ✓✓✓")
-                                    Log.d("CameraModule", "✓✓✓ Camera started successfully ✓✓✓")
-                                    
-                                    // 테스트 이벤트 발송 (이벤트 시스템 확인용)
-                                    try {
-                                        sendEvent("onCameraFrame", mapOf(
-                                            "type" to "test",
-                                            "message" to "Camera started - event system test",
-                                            "eventKey" to eventKey,
-                                            "timestamp" to System.currentTimeMillis()
-                                        ))
-                                        saveDebugLog("✓ Test event sent (onCameraFrame with eventKey: ${eventKey})")
-                                        Log.d("CameraModule", "✓ Test event sent (onCameraFrame with eventKey: ${eventKey})")
-                                    } catch (e: Exception) {
-                                        saveDebugLog("Failed to send test event: ${e.message}")
-                                        Log.e("CameraModule", "Failed to send test event", e)
-                                    }
-                                    
-                                    promise.resolve(mapOf(
-                                        "success" to true,
-                                        "isActive" to true,
-                                        "facing" to facing,
-                                        "isRecording" to false,
-                                        "isStreaming" to isStreaming,
-                                        "eventKey" to eventKey
-                                    ))
-                                } else {
-                                    saveDebugLog("ERROR: Camera object is null after binding")
-                                    Log.e("CameraModule", "ERROR: Camera object is null after binding")
-                                    promise.resolve(mapOf("success" to false, "error" to "Camera binding returned null"))
-                                }
+                            saveDebugLog("ERROR: Camera object is null after binding")
+                            Log.e("CameraModule", "ERROR: Camera object is null after binding")
+                            promise.resolve(mapOf("success" to false, "error" to "Camera binding returned null"))
+                        }
 
                             } catch (e: Exception) {
                                 saveDebugLog("ERROR in camera provider listener: ${e.message}")
@@ -738,12 +715,12 @@ class CameraModule : Module() {
 
     private fun processFrame(imageProxy: ImageProxy) {
         try {
-            saveDebugLog("processFrame called - isStreaming: $isStreaming, eventName: $streamingEventName")
-            Log.d("CameraModule", "processFrame called - isStreaming: $isStreaming, eventName: $streamingEventName")
+            saveDebugLog("processFrame called - isStreaming: $isStreaming")
+            Log.d("CameraModule", "processFrame called - isStreaming: $isStreaming")
             
-            if (!isStreaming || streamingEventName == null) {
-                saveDebugLog("Frame skipped - streaming disabled or no event name")
-                Log.w("CameraModule", "Frame skipped - streaming disabled or no event name")
+            if (!isStreaming) {
+                saveDebugLog("Frame skipped - streaming disabled")
+                Log.w("CameraModule", "Frame skipped - streaming disabled")
                 imageProxy.close()
                 return
             }
@@ -773,16 +750,14 @@ class CameraModule : Module() {
 
             mainHandler.post {
                 try {
-                    val eventKey = streamingEventName ?: "cameraStream"
                     sendEvent("onCameraFrame", mapOf(
                         "type" to "cameraFrame",
-                        "eventKey" to eventKey,
                         "base64" to "data:image/jpeg;base64,$base64",
                         "width" to rotatedBitmap.width,
                         "height" to rotatedBitmap.height
                     ))
-                    saveDebugLog("✓ Frame sent via onCameraFrame (eventKey: ${eventKey})")
-                    Log.d("CameraModule", "✓ Frame sent via onCameraFrame (eventKey: ${eventKey})")
+                    saveDebugLog("✓ Frame sent via onCameraFrame")
+                    Log.d("CameraModule", "✓ Frame sent via onCameraFrame")
                 } catch (e: Exception) {
                     saveDebugLog("Failed to send frame event: ${e.message}")
                     Log.e("CameraModule", "Failed to send frame event", e)
@@ -808,7 +783,6 @@ class CameraModule : Module() {
             
             saveDebugLog("Setting isStreaming = false")
             isStreaming = false
-            streamingEventName = null
             
             // ImageAnalyzer의 분석기를 먼저 제거
             imageAnalyzer?.let {

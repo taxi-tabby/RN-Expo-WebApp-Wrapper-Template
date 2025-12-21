@@ -225,7 +225,8 @@ export const handleBridgeMessage = (messageData: string): boolean => {
  */
 export const sendToWeb = <T = unknown>(action: string, payload?: T) => {
   if (!webViewInstance) {
-    console.warn('[Bridge] WebView not available');
+    console.warn('[Bridge] ⚠️ sendToWeb called but WebView not available!');
+    console.warn(`[Bridge] - action: ${action}`);
     return;
   }
 
@@ -250,7 +251,12 @@ export const sendToWeb = <T = unknown>(action: string, payload?: T) => {
     !messageJSON.includes('base64');
   
   if (shouldLog) {
-    console.log(`[Bridge] Sent to web: ${action}`, payload);
+    console.log(`[Bridge] ✓ Sent to web: ${action}`, payload);
+  } else {
+    // cameraFrame도 첫 10개는 로그 출력
+    if (action.includes('cameraFrame') || action.includes('cameraStream')) {
+      console.log(`[Bridge] ✓ Frame sent to web via action: '${action}' (payload size: ${messageJSON.length} bytes)`);
+    }
   }
 };
 
