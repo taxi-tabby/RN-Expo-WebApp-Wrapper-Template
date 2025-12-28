@@ -301,7 +301,7 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 - `rnww-plugin-screen-pinning`: 앱 고정 기능 (Android 전용)
 
 
-### 1. 플러그인 패키지 설치
+### 1. 플러그인 패키지 설치 등
 
 ```bash
 npm install rnww-plugin-camera rnww-plugin-microphone rnww-plugin-screen-pinning
