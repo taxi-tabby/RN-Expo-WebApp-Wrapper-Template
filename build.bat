@@ -86,6 +86,8 @@ goto LOCAL_BUILD
 echo.
 echo ▶ Debug APK 빌드 시작...
 echo ============================================
+echo 플러그인 설정 중...
+call node scripts\setup-plugins.js
 call npx expo prebuild --platform android
 cd android
 call gradlew assembleDebug
@@ -101,6 +103,8 @@ goto MENU
 echo.
 echo ▶ Release APK 빌드 시작...
 echo ============================================
+echo 플러그인 설정 중...
+call node scripts\setup-plugins.js
 call npx expo prebuild --platform android
 cd android
 call gradlew assembleRelease
@@ -116,6 +120,8 @@ goto MENU
 echo.
 echo ▶ Release AAB 빌드 시작...
 echo ============================================
+echo 플러그인 설정 중...
+call node scripts\setup-plugins.js
 call npx expo prebuild --platform android
 cd android
 call gradlew bundleRelease

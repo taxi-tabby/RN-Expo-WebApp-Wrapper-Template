@@ -259,7 +259,7 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 | `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ✅ | Get camera status |
 | `checkMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | Check microphone permission |
 | `requestMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | Request microphone permission |
-| `startRecording` | - | `{ success }` | ✅ | ✅ | Start audio recording (real-time streaming) |
+| `startRecording` | `{ sampleRate?, chunkSize? }` | `{ success }` | ✅ | ✅ | Start audio recording (real-time streaming) |
 | `stopRecording` | - | `{ success }` | ✅ | ✅ | Stop audio recording |
 | `getMicrophoneStatus` | - | `{ success, isStreaming, hasMicrophone }` | ✅ | ✅ | Get microphone status |
 
@@ -269,6 +269,10 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
 - `quality`: JPEG quality (1-100, default: 30)
 - `maxWidth`: Maximum width (px, original if not specified)
 - `maxHeight`: Maximum height (px, original if not specified)
+
+**startRecording Parameters:**
+- `sampleRate`: Sample rate (8000-48000, default: 44100)
+- `chunkSize`: Chunk size (512-8192 bytes, default: 2048, ~23ms latency)
 
 **Camera Events:**
 - `onCameraFrame`: Receive camera frames (auto-triggered after startCamera)
@@ -281,6 +285,186 @@ sendToWeb('notification', { title: 'Notification', body: 'Content' });
   - Real-time PCM 16bit audio data (44.1kHz)
 
 > ✅ Supported | ⚠️ Partial | ❌ Not supported
+
+
+---
+
+
+## Plugin Module Installation and Configuration
+
+### Overview
+
+This project can be extended with external plugin modules in addition to built-in handlers. Currently available plugins:
+
+- `rnww-plugin-camera`: Camera functionality (photo capture, real-time streaming)
+- `rnww-plugin-microphone`: Microphone functionality (audio recording, real-time audio streaming)
+- `rnww-plugin-screen-pinning`: Screen pinning functionality (Android only)
+
+> **Note:** This template comes with these 3 plugins pre-installed. If not needed, remove them from `package.json` and delete related handler registration code from `lib/bridges/index.ts`.
+
+
+### 1. Plugin Package Installation
+
+Included by default in template, but to add to a new project:
+
+```bash
+npm install rnww-plugin-camera rnww-plugin-microphone rnww-plugin-screen-pinning
+```
+
+
+### 2. Plugin Setup Script (`scripts/setup-plugins.js`)
+
+Plugin packages require specific files to be copied to the package root for Expo module autolinking. The `scripts/setup-plugins.js` script is already prepared and automatically performs:
+
+- Copy `expo-module.config.json` to package root
+- Copy `android/`, `ios/` folders to package root
+- Remove invalid module folders (e.g., camera module in microphone plugin's android folder)
+
+**Note:** This script runs automatically after `npm install` (via `postinstall` hook) and before builds in `build.bat`.
+
+
+### 3. Create Bridge Adapter
+
+To use plugins, create a bridge adapter in the `lib/bridges/` folder.
+
+#### Example: Microphone Plugin (`lib/bridges/microphone/index.ts`)
+
+```typescript
+import { registerHandler, sendToWeb } from '@/lib/bridge';
+import { Platform } from 'react-native';
+import { registerMicrophoneHandlers as pluginRegisterMicrophoneHandlers } from 'rnww-plugin-microphone';
+
+/**
+ * Microphone handlers
+ */
+export const registerMicrophoneHandlers = () => {
+  pluginRegisterMicrophoneHandlers({
+    bridge: { registerHandler, sendToWeb },
+    platform: { OS: Platform.OS }
+  });
+};
+```
+
+**Key Points:**
+
+1. **Import plugin function:** Import the register function exported by the plugin
+   - Camera: `registerCameraHandlers`
+   - Microphone: `registerMicrophoneHandlers`
+   - Screen Pinning: `registerScreenPinningHandlers`
+
+2. **Pass bridge object:** Pass your project's `registerHandler` and `sendToWeb` functions as bridge object
+
+3. **Platform object format:** Must pass as `platform: { OS: Platform.OS }`
+   - ❌ Wrong: `platform: Platform.OS` or `platform: Platform.OS as any`
+   - ✅ Correct: `platform: { OS: Platform.OS }`
+
+4. **Type definition:** Plugins require this interface:
+   ```typescript
+   interface Config {
+     bridge: {
+       registerHandler: (action: string, handler: Function) => void;
+       sendToWeb: (action: string, payload?: any) => void;
+     };
+     platform: {
+       OS: 'ios' | 'android' | 'windows' | 'macos' | 'web';
+     };
+     logger?: {
+       log: (...args: any[]) => void;
+       warn: (...args: any[]) => void;
+       error: (...args: any[]) => void;
+     };
+   }
+   ```
+
+
+### 4. Add to Global Handler Registration
+
+Add new handlers to `lib/bridges/index.ts`:
+
+```typescript
+import { registerCameraHandlers } from './camera';
+import { registerMicrophoneHandlers } from './microphone';
+import { registerScreenPinningHandlers } from './screen-pinning';
+// ... other handler imports
+
+export const registerBuiltInHandlers = () => {
+  registerCameraHandlers();
+  registerMicrophoneHandlers();
+  registerScreenPinningHandlers();
+  // ... other handler calls
+};
+```
+
+
+### 5. Build and Test
+
+1. **Verify plugin setup:**
+   ```bash
+   node scripts/setup-plugins.js
+   ```
+
+2. **Build:**
+   ```bash
+   # Windows
+   build.bat
+   
+   # Or manually
+   npx expo prebuild --clean
+   cd android
+   .\gradlew assembleRelease
+   ```
+
+3. **Verify autolinking:**
+   Check build logs for:
+   ```
+   › Skipped autolinking: expo-modules-core, rnww-plugin-camera, rnww-plugin-microphone, rnww-plugin-screen-pinning
+   ```
+
+
+### 6. Usage in Web
+
+Call plugin-provided handlers from web using `AppBridge`:
+
+```javascript
+// Request microphone permission
+const result = await AppBridge.call('requestMicrophonePermission');
+console.log('Permission status:', result.granted);
+
+// Start recording
+await AppBridge.call('startRecording', {
+  sampleRate: 44100,
+  chunkSize: 2048
+});
+
+// Receive audio chunks
+AppBridge.on('onAudioChunk', (payload) => {
+  console.log('Audio data:', payload.base64);
+});
+
+// Stop recording
+await AppBridge.call('stopRecording');
+```
+
+
+### Troubleshooting
+
+#### 1. "Unknown action: startRecording" Error
+
+- **Cause:** Handlers not properly registered
+- **Solution:**
+  1. Check `platform` object format: `{ OS: Platform.OS }`
+  2. Verify register function call added to `lib/bridges/index.ts`
+  3. Confirm `registerBuiltInHandlers()` called in `components/webview-container.tsx`
+
+#### 2. Build Failure: "Unresolved reference: CameraModule"
+
+- **Cause:** Invalid module files included in plugin package
+- **Solution:** Run `scripts/setup-plugins.js` to remove invalid files
+
+#### 3. Autolinking Not Working
+
+- **Cause:** `expo-module.config.json`, `android/`, `ios/` folders not in package root
+- **Solution:** Run `scripts/setup-plugins.js` or re-run `npm install`
 
 
 ---

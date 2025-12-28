@@ -1,9 +1,0 @@
-{
-  "platforms": ["android", "ios"],
-  "android": {
-    "modules": ["expo.modules.custommicrophone.MicrophoneModule"]
-  },
-  "ios": {
-    "modules": ["MicrophoneModule"]
-  }
-}

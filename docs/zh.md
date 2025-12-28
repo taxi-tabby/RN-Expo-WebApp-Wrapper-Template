@@ -259,7 +259,7 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ✅ | 获取相机状态 |
 | `checkMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | 检查麦克风权限 |
 | `requestMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | 请求麦克风权限 |
-| `startRecording` | - | `{ success }` | ✅ | ✅ | 开始录音 (实时流) |
+| `startRecording` | `{ sampleRate?, chunkSize? }` | `{ success }` | ✅ | ✅ | 开始录音 (实时流) |
 | `stopRecording` | - | `{ success }` | ✅ | ✅ | 停止录音 |
 | `getMicrophoneStatus` | - | `{ success, isStreaming, hasMicrophone }` | ✅ | ✅ | 获取麦克风状态 |
 
@@ -269,6 +269,10 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 - `quality`: JPEG质量 (1-100, 默认值: 30)
 - `maxWidth`: 最大宽度 (px, 未指定时保持原始)
 - `maxHeight`: 最大高度 (px, 未指定时保持原始)
+
+**startRecording参数：**
+- `sampleRate`: 采样率 (8000-48000, 默认值: 44100)
+- `chunkSize`: 块大小 (512-8192 bytes, 默认值: 2048, 约23ms延迟)
 
 **相机事件：**
 - `onCameraFrame`: 接收相机帧 (startCamera后自动触发)
@@ -281,6 +285,186 @@ sendToWeb('notification', { title: '通知', body: '内容' });
   - 实时PCM 16bit音频数据 (44.1kHz)
 
 > ✅ 支持 | ⚠️ 部分支持 | ❌ 不支持
+
+
+---
+
+
+## 插件模块安装和配置
+
+### 概述
+
+除了内置处理程序外，该项目还可以通过外部插件模块扩展功能。当前可用的插件：
+
+- `rnww-plugin-camera`: 相机功能（拍照、实时流）
+- `rnww-plugin-microphone`: 麦克风功能（录音、实时音频流）
+- `rnww-plugin-screen-pinning`: 应用固定功能（仅限Android）
+
+> **注意:** 此模板默认安装了上述3个插件。如果不需要，可以从`package.json`中删除它们，并从`lib/bridges/index.ts`中删除相关的处理程序注册代码。
+
+
+### 1. 插件包安装
+
+模板中默认包含，但要添加到新项目：
+
+```bash
+npm install rnww-plugin-camera rnww-plugin-microphone rnww-plugin-screen-pinning
+```
+
+
+### 2. 插件设置脚本 (`scripts/setup-plugins.js`)
+
+插件包需要将特定文件复制到包根目录才能使Expo模块自动链接工作。`scripts/setup-plugins.js`脚本已准备好，自动执行以下操作：
+
+- 将`expo-module.config.json`复制到包根目录
+- 将`android/`、`ios/`文件夹复制到包根目录
+- 删除无效的模块文件夹（例如：麦克风插件的android文件夹中的相机模块）
+
+**注意:** 此脚本在`npm install`后自动运行（通过`postinstall`钩子），并且在`build.bat`中的构建之前也会运行。
+
+
+### 3. 创建Bridge适配器
+
+要使用插件，需要在`lib/bridges/`文件夹中创建bridge适配器。
+
+#### 示例: 麦克风插件 (`lib/bridges/microphone/index.ts`)
+
+```typescript
+import { registerHandler, sendToWeb } from '@/lib/bridge';
+import { Platform } from 'react-native';
+import { registerMicrophoneHandlers as pluginRegisterMicrophoneHandlers } from 'rnww-plugin-microphone';
+
+/**
+ * 麦克风相关处理程序
+ */
+export const registerMicrophoneHandlers = () => {
+  pluginRegisterMicrophoneHandlers({
+    bridge: { registerHandler, sendToWeb },
+    platform: { OS: Platform.OS }
+  });
+};
+```
+
+**关键要点:**
+
+1. **导入插件函数:** 导入插件导出的register函数
+   - 相机: `registerCameraHandlers`
+   - 麦克风: `registerMicrophoneHandlers`
+   - 屏幕固定: `registerScreenPinningHandlers`
+
+2. **传递bridge对象:** 将项目的`registerHandler`和`sendToWeb`函数作为bridge对象传递
+
+3. **platform对象格式:** 必须以`platform: { OS: Platform.OS }`格式传递
+   - ❌ 错误: `platform: Platform.OS` 或 `platform: Platform.OS as any`
+   - ✅ 正确: `platform: { OS: Platform.OS }`
+
+4. **类型定义:** 插件需要此接口：
+   ```typescript
+   interface Config {
+     bridge: {
+       registerHandler: (action: string, handler: Function) => void;
+       sendToWeb: (action: string, payload?: any) => void;
+     };
+     platform: {
+       OS: 'ios' | 'android' | 'windows' | 'macos' | 'web';
+     };
+     logger?: {
+       log: (...args: any[]) => void;
+       warn: (...args: any[]) => void;
+       error: (...args: any[]) => void;
+     };
+   }
+   ```
+
+
+### 4. 添加到全局处理程序注册
+
+在`lib/bridges/index.ts`中添加新处理程序：
+
+```typescript
+import { registerCameraHandlers } from './camera';
+import { registerMicrophoneHandlers } from './microphone';
+import { registerScreenPinningHandlers } from './screen-pinning';
+// ... 其他处理程序导入
+
+export const registerBuiltInHandlers = () => {
+  registerCameraHandlers();
+  registerMicrophoneHandlers();
+  registerScreenPinningHandlers();
+  // ... 其他处理程序调用
+};
+```
+
+
+### 5. 构建和测试
+
+1. **验证插件设置:**
+   ```bash
+   node scripts/setup-plugins.js
+   ```
+
+2. **构建:**
+   ```bash
+   # Windows
+   build.bat
+   
+   # 或手动
+   npx expo prebuild --clean
+   cd android
+   .\gradlew assembleRelease
+   ```
+
+3. **验证自动链接:**
+   检查构建日志中的消息：
+   ```
+   › Skipped autolinking: expo-modules-core, rnww-plugin-camera, rnww-plugin-microphone, rnww-plugin-screen-pinning
+   ```
+
+
+### 6. Web中的使用
+
+使用`AppBridge`从Web调用插件提供的处理程序：
+
+```javascript
+// 请求麦克风权限
+const result = await AppBridge.call('requestMicrophonePermission');
+console.log('权限状态:', result.granted);
+
+// 开始录音
+await AppBridge.call('startRecording', {
+  sampleRate: 44100,
+  chunkSize: 2048
+});
+
+// 接收音频块
+AppBridge.on('onAudioChunk', (payload) => {
+  console.log('音频数据:', payload.base64);
+});
+
+// 停止录音
+await AppBridge.call('stopRecording');
+```
+
+
+### 故障排除
+
+#### 1. "Unknown action: startRecording" 错误
+
+- **原因:** 处理程序未正确注册
+- **解决方案:**
+  1. 检查`platform`对象格式: `{ OS: Platform.OS }`
+  2. 验证register函数调用已添加到`lib/bridges/index.ts`
+  3. 确认`components/webview-container.tsx`中调用了`registerBuiltInHandlers()`
+
+#### 2. 构建失败: "Unresolved reference: CameraModule"
+
+- **原因:** 插件包中包含无效的模块文件
+- **解决方案:** 运行`scripts/setup-plugins.js`删除无效文件
+
+#### 3. 自动链接不工作
+
+- **原因:** `expo-module.config.json`、`android/`、`ios/`文件夹不在包根目录中
+- **解决方案:** 运行`scripts/setup-plugins.js`或重新运行`npm install`
 
 
 ---

@@ -259,7 +259,7 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 | `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ✅ | カメラ状態を取得 |
 | `checkMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | マイク権限を確認 |
 | `requestMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | マイク権限を要求 |
-| `startRecording` | - | `{ success }` | ✅ | ✅ | 音声録音を開始 (リアルタイムストリーミング) |
+| `startRecording` | `{ sampleRate?, chunkSize? }` | `{ success }` | ✅ | ✅ | 音声録音を開始 (リアルタイムストリーミング) |
 | `stopRecording` | - | `{ success }` | ✅ | ✅ | 音声録音を停止 |
 | `getMicrophoneStatus` | - | `{ success, isStreaming, hasMicrophone }` | ✅ | ✅ | マイク状態を取得 |
 
@@ -269,6 +269,10 @@ sendToWeb('notification', { title: '通知', body: '内容' });
 - `quality`: JPEG品質 (1-100, デフォルト: 30)
 - `maxWidth`: 最大幅 (px, 未指定の場合は元のまま)
 - `maxHeight`: 最大高さ (px, 未指定の場合は元のまま)
+
+**startRecordingパラメータ:**
+- `sampleRate`: サンプルレート (8000-48000, デフォルト: 44100)
+- `chunkSize`: チャンクサイズ (512-8192 bytes, デフォルト: 2048, 約23ms遅延)
 
 **カメライベント:**
 - `onCameraFrame`: カメラフレームを受信 (startCamera後に自動発生)
@@ -281,6 +285,186 @@ sendToWeb('notification', { title: '通知', body: '内容' });
   - リアルタイムPCM 16bitオーディオデータ (44.1kHz)
 
 > ✅ 対応 | ⚠️ 一部対応 | ❌ 非対応
+
+
+---
+
+
+## プラグインモジュールのインストールと設定
+
+### 概要
+
+このプロジェクトは、組み込みハンドラに加えて、外部プラグインモジュールで機能を拡張できます。現在利用可能なプラグイン：
+
+- `rnww-plugin-camera`: カメラ機能（写真撮影、リアルタイムストリーミング）
+- `rnww-plugin-microphone`: マイク機能（音声録音、リアルタイムオーディオストリーミング）
+- `rnww-plugin-screen-pinning`: アプリ固定機能（Android専用）
+
+> **注意:** このテンプレートには上記3つのプラグインがデフォルトでインストールされています。不要な場合は、`package.json`から削除し、`lib/bridges/index.ts`から関連するハンドラ登録コードを削除してください。
+
+
+### 1. プラグインパッケージのインストール
+
+テンプレートにデフォルトで含まれていますが、新しいプロジェクトに追加する場合：
+
+```bash
+npm install rnww-plugin-camera rnww-plugin-microphone rnww-plugin-screen-pinning
+```
+
+
+### 2. プラグイン設定スクリプト (`scripts/setup-plugins.js`)
+
+プラグインパッケージは、Expoモジュールの自動リンクが機能するように、特定のファイルをパッケージルートにコピーする必要があります。`scripts/setup-plugins.js`スクリプトがすでに用意されており、次の作業を自動的に実行します：
+
+- `expo-module.config.json`をパッケージルートにコピー
+- `android/`、`ios/`フォルダをパッケージルートにコピー
+- 無効なモジュールフォルダを削除（例：マイクプラグインのandroidフォルダ内のカメラモジュール）
+
+**注意:** このスクリプトは`npm install`後に自動的に実行され（`postinstall`フック）、`build.bat`のビルド前にも実行されます。
+
+
+### 3. Bridgeアダプタの作成
+
+プラグインを使用するには、`lib/bridges/`フォルダにbridgeアダプタを作成する必要があります。
+
+#### 例: マイクプラグイン (`lib/bridges/microphone/index.ts`)
+
+```typescript
+import { registerHandler, sendToWeb } from '@/lib/bridge';
+import { Platform } from 'react-native';
+import { registerMicrophoneHandlers as pluginRegisterMicrophoneHandlers } from 'rnww-plugin-microphone';
+
+/**
+ * マイク関連ハンドラ
+ */
+export const registerMicrophoneHandlers = () => {
+  pluginRegisterMicrophoneHandlers({
+    bridge: { registerHandler, sendToWeb },
+    platform: { OS: Platform.OS }
+  });
+};
+```
+
+**重要なポイント:**
+
+1. **プラグイン関数のインポート:** プラグインがエクスポートするregister関数をインポート
+   - カメラ: `registerCameraHandlers`
+   - マイク: `registerMicrophoneHandlers`
+   - スクリーン固定: `registerScreenPinningHandlers`
+
+2. **bridgeオブジェクトの渡し方:** プロジェクトの`registerHandler`と`sendToWeb`関数をbridgeオブジェクトとして渡す
+
+3. **platformオブジェクトの形式:** `platform: { OS: Platform.OS }`の形式で渡す必要があります
+   - ❌ 間違い: `platform: Platform.OS` または `platform: Platform.OS as any`
+   - ✅ 正しい: `platform: { OS: Platform.OS }`
+
+4. **型定義:** プラグインは次のインターフェースを要求します：
+   ```typescript
+   interface Config {
+     bridge: {
+       registerHandler: (action: string, handler: Function) => void;
+       sendToWeb: (action: string, payload?: any) => void;
+     };
+     platform: {
+       OS: 'ios' | 'android' | 'windows' | 'macos' | 'web';
+     };
+     logger?: {
+       log: (...args: any[]) => void;
+       warn: (...args: any[]) => void;
+       error: (...args: any[]) => void;
+     };
+   }
+   ```
+
+
+### 4. グローバルハンドラ登録に追加
+
+`lib/bridges/index.ts`に新しいハンドラを追加：
+
+```typescript
+import { registerCameraHandlers } from './camera';
+import { registerMicrophoneHandlers } from './microphone';
+import { registerScreenPinningHandlers } from './screen-pinning';
+// ... その他のハンドラのインポート
+
+export const registerBuiltInHandlers = () => {
+  registerCameraHandlers();
+  registerMicrophoneHandlers();
+  registerScreenPinningHandlers();
+  // ... その他のハンドラ呼び出し
+};
+```
+
+
+### 5. ビルドとテスト
+
+1. **プラグイン設定の確認:**
+   ```bash
+   node scripts/setup-plugins.js
+   ```
+
+2. **ビルド:**
+   ```bash
+   # Windows
+   build.bat
+   
+   # または手動で
+   npx expo prebuild --clean
+   cd android
+   .\gradlew assembleRelease
+   ```
+
+3. **自動リンクの確認:**
+   ビルドログで次のメッセージを確認：
+   ```
+   › Skipped autolinking: expo-modules-core, rnww-plugin-camera, rnww-plugin-microphone, rnww-plugin-screen-pinning
+   ```
+
+
+### 6. Webでの使用
+
+プラグインが提供するハンドラを`AppBridge`を使用してWebから呼び出します：
+
+```javascript
+// マイク権限のリクエスト
+const result = await AppBridge.call('requestMicrophonePermission');
+console.log('権限ステータス:', result.granted);
+
+// 録音開始
+await AppBridge.call('startRecording', {
+  sampleRate: 44100,
+  chunkSize: 2048
+});
+
+// オーディオチャンクの受信
+AppBridge.on('onAudioChunk', (payload) => {
+  console.log('オーディオデータ:', payload.base64);
+});
+
+// 録音停止
+await AppBridge.call('stopRecording');
+```
+
+
+### トラブルシューティング
+
+#### 1. "Unknown action: startRecording" エラー
+
+- **原因:** ハンドラが正しく登録されていない
+- **解決方法:**
+  1. `platform`オブジェクトの形式を確認: `{ OS: Platform.OS }`
+  2. `lib/bridges/index.ts`にregister関数の呼び出しが追加されているか確認
+  3. `components/webview-container.tsx`で`registerBuiltInHandlers()`が呼び出されているか確認
+
+#### 2. ビルド失敗: "Unresolved reference: CameraModule"
+
+- **原因:** プラグインパッケージに無効なモジュールファイルが含まれている
+- **解決方法:** `scripts/setup-plugins.js`を実行して無効なファイルを削除
+
+#### 3. 自動リンクが機能しない
+
+- **原因:** `expo-module.config.json`、`android/`、`ios/`フォルダがパッケージルートにない
+- **解決方法:** `scripts/setup-plugins.js`を実行するか、`npm install`を再実行
 
 
 ---

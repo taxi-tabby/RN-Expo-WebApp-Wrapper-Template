@@ -62,6 +62,41 @@ const SECURITY_TOKEN = generateSecurityToken();
 export const getBridgeClientScript = (): string => {
   return `
 (function() {
+  // ========================================
+  // beforeunload 경고창 완전 무력화
+  // (폼 데이터 입력 중 페이지 이탈 시 경고창 방지)
+  // ========================================
+  
+  // 1. window.onbeforeunload 속성 무력화
+  Object.defineProperty(window, 'onbeforeunload', {
+    get: function() { return null; },
+    set: function() { return; },
+    configurable: false
+  });
+  
+  // 2. addEventListener로 등록되는 beforeunload 이벤트 차단
+  var originalAddEventListener = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function(type, listener, options) {
+    if (type === 'beforeunload') {
+      // beforeunload 이벤트 등록 무시
+      return;
+    }
+    return originalAddEventListener.call(this, type, listener, options);
+  };
+  
+  // 3. 이미 등록된 beforeunload 이벤트 무력화
+  window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    delete e.returnValue;
+    return undefined;
+  }, true);
+  
+  // ========================================
+  // AppBridge 초기화
+  // ========================================
+  
   // 이미 초기화되었으면 스킵
   if (window.AppBridge) return;
 

@@ -259,7 +259,7 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 | `getCameraStatus` | - | `{ isStreaming, facing, hasCamera }` | ✅ | ✅ | 카메라 상태 조회 |
 | `checkMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | 마이크 권한 확인 |
 | `requestMicrophonePermission` | - | `{ success, granted, status }` | ✅ | ✅ | 마이크 권한 요청 |
-| `startRecording` | - | `{ success }` | ✅ | ✅ | 음성 녹음 시작 (실시간 오디오 스트리밍) |
+| `startRecording` | `{ sampleRate?, chunkSize? }` | `{ success }` | ✅ | ✅ | 음성 녹음 시작 (실시간 오디오 스트리밍) |
 | `stopRecording` | - | `{ success }` | ✅ | ✅ | 음성 녹음 중지 |
 | `getMicrophoneStatus` | - | `{ success, isStreaming, hasMicrophone }` | ✅ | ✅ | 마이크 상태 조회 |
 
@@ -269,6 +269,10 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 - `quality`: JPEG 품질 (1-100, 기본값: 30)
 - `maxWidth`: 최대 너비 (px, 미지정시 원본 유지)
 - `maxHeight`: 최대 높이 (px, 미지정시 원본 유지)
+
+**startRecording 파라미터:**
+- `sampleRate`: 샘플레이트 (8000-48000, 기본값: 44100)
+- `chunkSize`: 청크 크기 (512-8192 bytes, 기본값: 2048, 약 23ms 지연)
 
 **카메라 이벤트:**
 - `onCameraFrame`: 카메라 프레임 수신 (startCamera 후 자동 발생)
@@ -282,6 +286,91 @@ sendToWeb('notification', { title: '알림', body: '내용' });
 
 > ✅ 지원 | ⚠️ 부분 지원 | ❌ 미지원
 
+
+---
+
+
+## 플러그인 모듈 설치 및 적용
+
+### 개요
+
+이 프로젝트는 기본 내장 핸들러 외에도 외부 플러그인 모듈을 통해 기능을 확장할 수 있습니다. 현재 사용 가능한 플러그인:
+
+- `rnww-plugin-camera`: 카메라 기능 (사진 촬영, 실시간 스트리밍)
+- `rnww-plugin-microphone`: 마이크 기능 (음성 녹음, 실시간 오디오 스트리밍)
+- `rnww-plugin-screen-pinning`: 앱 고정 기능 (Android 전용)
+
+> **참고:** 이 템플릿은 위의 3개 플러그인이 기본으로 설치되어 있습니다. 불필요한 경우 `package.json`에서 해당 플러그인을 제거하고 `lib/bridges/index.ts`에서 관련 핸들러 등록 코드를 삭제하면 됩니다.
+
+
+### 1. 플러그인 패키지 설치
+
+템플릿에 기본 포함되어 있지만, 새로운 프로젝트에 추가하려면:
+
+```bash
+npm install rnww-plugin-camera rnww-plugin-microphone rnww-plugin-screen-pinning
+```
+
+
+### 2. 플러그인 설정 스크립트 (`scripts/setup-plugins.js`)
+
+플러그인 패키지는 Expo 모듈 autolinking이 작동하도록 특정 파일들을 package root로 복사해야 합니다. 이미 `scripts/setup-plugins.js` 스크립트가 준비되어 있으며, 다음 작업을 자동으로 수행합니다:
+
+- `expo-module.config.json` 파일을 package root로 복사
+- `android/`, `ios/` 폴더를 package root로 복사
+
+**주의:** 이 스크립트는 `npm install` 후 자동으로 실행되며 (`postinstall` hook), 빌드 전에도 `build.bat`에서 자동으로 실행됩니다.
+
+
+### 3. Bridge Adapter 생성
+
+플러그인을 사용하려면 `lib/bridges/` 폴더에 bridge adapter를 생성해야 합니다.
+
+#### 예시: 마이크 플러그인 (`lib/bridges/microphone/index.ts`)
+
+```typescript
+import { registerHandler, sendToWeb } from '@/lib/bridge';
+import { Platform } from 'react-native';
+import { registerMicrophoneHandlers as pluginRegisterMicrophoneHandlers } from 'rnww-plugin-microphone';
+
+/**
+ * 마이크 관련 핸들러
+ */
+export const registerMicrophoneHandlers = () => {
+  pluginRegisterMicrophoneHandlers({
+    bridge: { registerHandler, sendToWeb },
+    platform: { OS: Platform.OS }
+  });
+};
+```
+
+**중요 포인트:**
+
+1. **플러그인 함수 import:** 플러그인이 export하는 register 함수를 import합니다
+   - 카메라: `registerCameraHandlers`
+   - 마이크: `registerMicrophoneHandlers`
+   - 스크린 피닝: `registerScreenPinningHandlers`
+
+2. **Bridge 객체 전달:** 프로젝트의 `registerHandler`, `sendToWeb` 등 함수를 객체로 전달합니다.
+
+
+### 4. 전역 핸들러 등록에 추가
+
+`lib/bridges/index.ts`에 새로운 핸들러를 추가합니다:
+
+```typescript
+import { registerCameraHandlers } from './camera';
+import { registerMicrophoneHandlers } from './microphone';
+import { registerScreenPinningHandlers } from './screen-pinning';
+// ... 기타 핸들러 imports
+
+export const registerBuiltInHandlers = () => {
+  registerCameraHandlers();
+  registerMicrophoneHandlers();
+  registerScreenPinningHandlers();
+  // ... 기타 핸들러 호출
+};
+```
 
 ---
 
